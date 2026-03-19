@@ -7,7 +7,12 @@ import (
 )
 
 func DateToISO(dateStr string) (string, error) {
-	date, err := time.Parse("2006-01-02", strings.TrimSpace(dateStr))
+	// validate dateStr
+	trimmedDate := strings.TrimSpace(dateStr)
+	if trimmedDate == "" {
+		return "0", fmt.Errorf("Date should not be empty")
+	}
+	date, err := time.Parse("2006-01-02", trimmedDate)
 	if err != nil {
 		return "0", fmt.Errorf("failed to parse date: %w", err)
 	}

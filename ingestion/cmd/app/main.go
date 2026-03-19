@@ -4,6 +4,7 @@ import (
 	"encoding/csv"
 	"flag"
 	"fmt"
+	"io"
 	"io/fs"
 	"log"
 	"os"
@@ -14,6 +15,7 @@ import (
 	"github.com/LDFLK/RTI-Tracker/ingestion/internals/core"
 	"github.com/LDFLK/RTI-Tracker/ingestion/internals/models"
 	"github.com/LDFLK/RTI-Tracker/ingestion/internals/ports"
+	"github.com/LDFLK/RTI-Tracker/ingestion/internals/utils"
 )
 
 func main() {
@@ -64,49 +66,65 @@ func main() {
 			fileDir := filepath.Dir(path)
 			splittedDir := strings.Split(fileDir, "/")
 
-			parentDir := splittedDir[len(splittedDir)-1]
+			// access the date from the folder structure
+			date := splittedDir[len(splittedDir)-2]
+			dateISO, err := utils.DateToISO(date)
+
+			if err != nil {
+				fmt.Errorf("failed to parse date %w", err)
+			}
 
 			if fileName == "status.csv" {
-
+				// attribute insertion process for status
 			} else {
+				// node creation process and attribute insertion for request
 				// open the file
 				f, err := os.Open(path)
 				if err != nil {
-					log.Print("Failed to open file: %s", err)
+					fmt.Printf("Failed to open file: %s", err)
 				}
 
 				r := csv.NewReader(f)
 
 				// read the first line of the csv first to skip the first line
 				if _, err := r.Read(); err != nil {
-					log.Println("Error accessing fields in csv: %s", err)
+					fmt.Printf("Error accessing fields in csv: %s", err)
 				}
 
-				// read the second line of the csv
-				first_row, err := r.Read()
-				if err != nil {
-					log.Println("Error accessing fields in csv: %s", err)
-				}
+				// access data starting from the second row in the csv
+				for {
+					record, err := r.Read()
 
-				// access data from first row of the csv
-				title := first_row[0]
-				content := first_row[1]
-				sender := first_row[2]
-				receiver := first_row[3]
+					if err == io.EOF {
+						break
+					}
 
-				// field data to the RTIRequest
-				entity := &models.RTIRequest{
-					Title:    title,
-					Content:  content,
-					Sender:   sender,
-					Receiver: receiver,
-					Created:  parentDir,
-				}
+					if err != nil {
+						log.Println("Err reading records in the file")
+					}
 
-				_, err = s.ProcessRTIEntity(entity)
+					title := record[0]
+					content := record[1]
+					sender := record[2]
+					receiverInstitution := record[3]
+					receiverPosition := record[4]
 
-				if err != nil {
-					log.Printf("Entity creation failed %s", title)
+					// field data to the RTIRequest
+					entity := &models.RTIRequest{
+						Title:               title,
+						Content:             content,
+						Sender:              sender,
+						ReceiverInstitution: receiverInstitution,
+						ReceiverPosition:    receiverPosition,
+						Created:             dateISO,
+					}
+
+					_, err = s.ProcessRTIEntity(entity)
+
+					if err != nil {
+						log.Printf("Entity creation failed %s", title)
+					}
+
 				}
 
 			}

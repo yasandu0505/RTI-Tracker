@@ -43,8 +43,6 @@ func (c *IngestionService) CreateEntity(entity *models.Entity) (*models.Entity, 
 		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
 
-	fmt.Print(resp.StatusCode)
-
 	if resp.StatusCode != http.StatusCreated {
 		return nil, client.HttpErrorFromStatus(resp.StatusCode, string(body))
 	}
