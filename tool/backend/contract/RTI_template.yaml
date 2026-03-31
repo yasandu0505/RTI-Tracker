@@ -1,0 +1,412 @@
+openapi: 3.0.3
+
+info:
+  title: RTI Tracker - Template API
+  description: |
+    API for managing RTI (Right to Information) Templates.
+    Templates can be created with an attached file that is stored on GitHub.
+    All endpoints are protected via opaque bearer token authentication.
+  version: 1.0.0
+  contact:
+    name: RTI Tracker Team
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local development server
+
+# Security scheme
+components:
+  securitySchemes:
+    opaqueBearerToken:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque
+      description: |
+        Opaque bearer token. Pass as `Authorization: Bearer <token>`.
+
+  # Schemas
+  schemas:
+    # Request body for Create / Update
+    RTITemplateRequest:
+      type: object
+      required:
+        - title
+        - description
+        - file
+      properties:
+        title:
+          type: string
+          example: Freedom of Information Request Template
+          description: Human-readable title for the RTI template.
+        description:
+          type: string
+          example: A standard template for filing RTI requests related to public expenditure.
+          description: Detailed description of the RTI template.
+        file:
+          type: string
+          format: binary
+          description: Template document to upload (PDF, DOCX). Will be stored on GitHub.
+
+    # Single template response
+    RTITemplateResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+          description: Unique identifier of the RTI template.
+        title:
+          type: string
+          example: Freedom of Information Request Template
+          description: Title of the RTI template.
+        description:
+          type: string
+          example: A standard template for filing RTI requests related to public expenditure.
+          description: Description of the RTI template.
+        file:
+          type: string
+          format: uri
+          example: https://raw.githubusercontent.com/org/repo/main/templates/3fa85f64.pdf
+          description: Public GitHub URL of the uploaded file.
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-03-31T09:00:00Z"
+          description: ISO 8601 timestamp of when the template was created (UTC).
+
+    # Paginated list response
+    RTITemplateListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/RTITemplateResponse"
+          description: List of RTI templates for the current page.
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+
+    # Pagination metadata
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          minimum: 1
+          example: 1
+          description: Current page number (1-indexed).
+        pageSize:
+          type: integer
+          minimum: 1
+          maximum: 100
+          example: 20
+          description: Number of items per page.
+        totalItems:
+          type: integer
+          example: 84
+          description: Total number of RTI templates available.
+        totalPages:
+          type: integer
+          example: 5
+          description: Total number of pages based on pageSize.
+
+    # Error response
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: integer
+          example: 400
+          description: HTTP status code.
+        error:
+          type: string
+          example: Bad Request
+          description: Short error category.
+        message:
+          type: string
+          example: "Validation failed: title is required."
+          description: Human-readable error detail.
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-03-31T09:00:00Z"
+          description: ISO 8601 timestamp of when the error occurred (UTC).
+
+  # Reusable responses
+  responses:
+    Unauthorized:
+      description: Missing or invalid bearer token.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            status: 401
+            error: Unauthorized
+            message: "Bearer token is missing or invalid."
+            timestamp: "2026-03-31T09:00:00Z"
+
+    NotFound:
+      description: The requested RTI template was not found.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            status: 404
+            error: Not Found
+            message: "RTI template with id '3fa85f64-5717-4562-b3fc-2c963f66afa6' was not found."
+            timestamp: "2026-03-31T09:00:00Z"
+
+    UnprocessableEntity:
+      description: Validation error in the request payload.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            status: 422
+            error: Unprocessable Entity
+            message: "Validation failed: file must be a supported document type."
+            timestamp: "2026-03-31T09:00:00Z"
+
+    InternalServerError:
+      description: Unexpected server-side error.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            status: 500
+            error: Internal Server Error
+            message: "An unexpected error occurred. Please try again later."
+            timestamp: "2026-03-31T09:00:00Z"
+
+  # Reusable parameters
+  parameters:
+    TemplateId:
+      name: id
+      in: path
+      required: true
+      description: UUID of the RTI template.
+      schema:
+        type: string
+        format: uuid
+      example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+
+    PageParam:
+      name: page
+      in: query
+      required: false
+      description: Page number to retrieve (1-indexed). Defaults to 1.
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+      example: 1
+
+    PageSizeParam:
+      name: pageSize
+      in: query
+      required: false
+      description: Number of items per page. Defaults to 20, maximum 100.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+      example: 20
+
+# Global security — all endpoints require opaque bearer token
+security:
+  - opaqueBearerToken: []
+
+paths:
+  # /rti-templates — collection endpoints
+  /rti-templates:
+    # Create a new RTI template
+    post:
+      summary: Create an RTI template
+      operationId: createRTITemplate
+      description: Creates a new RTI template. The file is uploaded to GitHub and the URL is returned in `file`.
+      tags:
+        - RTI Templates
+      security:
+        - opaqueBearerToken: []
+      requestBody:
+        required: true
+        description: Multipart form data with template metadata and file.
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/RTITemplateRequest"
+            encoding:
+              file:
+                contentType: application/pdf, application/vnd.openxmlformats-officedocument.wordprocessingml.document, application/msword
+      responses:
+        "201":
+          description: RTI template created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RTITemplateResponse"
+              example:
+                id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                title: Freedom of Information Request Template
+                description: A standard template for filing RTI requests.
+                file: https://raw.githubusercontent.com/org/repo/main/templates/3fa85f64.pdf
+                createdAt: "2026-03-31T09:00:00Z"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+    # List all RTI templates with pagination
+    get:
+      summary: List all RTI templates
+      operationId: listRTITemplates
+      description: Returns a paginated list of all RTI templates.
+      tags:
+        - RTI Templates
+      security:
+        - opaqueBearerToken: []
+      parameters:
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/PageSizeParam"
+      responses:
+        "200":
+          description: A paginated list of RTI templates.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RTITemplateListResponse"
+              example:
+                data:
+                  - id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                    title: Freedom of Information Request Template
+                    description: A standard template for filing RTI requests.
+                    file: https://raw.githubusercontent.com/org/repo/main/templates/3fa85f64.pdf
+                    createdAt: "2026-03-31T09:00:00Z"
+                pagination:
+                  page: 1
+                  pageSize: 20
+                  totalItems: 84
+                  totalPages: 5
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  # /rti-templates/{id} — single resource endpoints
+  /rti-templates/{id}:
+    # Get a single RTI template by ID
+    get:
+      summary: Get an RTI template by ID
+      operationId: getRTITemplateById
+      description: Returns a single RTI template identified by its UUID.
+      tags:
+        - RTI Templates
+      security:
+        - opaqueBearerToken: []
+      parameters:
+        - $ref: "#/components/parameters/TemplateId"
+      responses:
+        "200":
+          description: RTI template found and returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RTITemplateResponse"
+              example:
+                id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                title: Freedom of Information Request Template
+                description: A standard template for filing RTI requests.
+                file: https://raw.githubusercontent.com/org/repo/main/templates/3fa85f64.pdf
+                createdAt: "2026-03-31T09:00:00Z"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+    # Update an existing RTI template
+    put:
+      summary: Update an RTI template
+      operationId: updateRTITemplate
+      description: Fully replaces an RTI template. If a new file is supplied it is uploaded to GitHub; otherwise the existing URL is kept.
+      tags:
+        - RTI Templates
+      security:
+        - opaqueBearerToken: []
+      parameters:
+        - $ref: "#/components/parameters/TemplateId"
+      requestBody:
+        required: true
+        description: Multipart form data with updated metadata and an optional new file.
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - title
+                - description
+              properties:
+                title:
+                  type: string
+                  example: Updated RTI Request Template
+                description:
+                  type: string
+                  example: Updated description for the RTI template.
+                file:
+                  type: string
+                  format: binary
+                  description: Optional. New file to replace the existing one on GitHub.
+            encoding:
+              file:
+                contentType: application/pdf, application/vnd.openxmlformats-officedocument.wordprocessingml.document, application/msword
+      responses:
+        "200":
+          description: RTI template updated successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RTITemplateResponse"
+              example:
+                id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
+                title: Updated RTI Request Template
+                description: Updated description for the RTI template.
+                file: https://raw.githubusercontent.com/org/repo/main/templates/3fa85f64-v2.pdf
+                createdAt: "2026-03-31T09:00:00Z"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+    # Delete an RTI template
+    delete:
+      summary: Delete an RTI template
+      operationId: deleteRTITemplate
+      description: Permanently deletes an RTI template by UUID. Returns 204 No Content on success.
+      tags:
+        - RTI Templates
+      security:
+        - opaqueBearerToken: []
+      parameters:
+        - $ref: "#/components/parameters/TemplateId"
+      responses:
+        "204":
+          description: RTI template deleted successfully. No content returned.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
