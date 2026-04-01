@@ -1,14 +1,12 @@
-openapi: 3.0.3
+openapi: 3.1.0
 
 info:
-  title: RTI Tracker - Template API
+  title: RTI Template API
   description: |
     API for managing RTI (Right to Information) Templates.
     Templates can be created with an attached file that is stored on GitHub.
     All endpoints are protected via opaque bearer token authentication.
   version: 1.0.0
-  contact:
-    name: RTI Tracker Team
 
 servers:
   - url: http://localhost:8080/api/v1
@@ -45,7 +43,7 @@ components:
         file:
           type: string
           format: binary
-          description: Template document to upload (PDF, DOCX). Will be stored on GitHub.
+          description: Template document to upload (PDF, Image). Will be stored on GitHub.
 
     # Single template response
     RTITemplateResponse:
@@ -144,7 +142,7 @@ components:
           example:
             status: 401
             error: Unauthorized
-            message: "Bearer token is missing or invalid."
+            message: "Not an authenticated user"
             timestamp: "2026-03-31T09:00:00Z"
 
     NotFound:
@@ -169,6 +167,18 @@ components:
             status: 422
             error: Unprocessable Entity
             message: "Validation failed: file must be a supported document type."
+            timestamp: "2026-03-31T09:00:00Z"
+
+    Conflict:
+      description: Cannot process because of a conflict.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            status: 409
+            error: Resource Conflict
+            message: "Template deletion failed: Due to resource conflict"
             timestamp: "2026-03-31T09:00:00Z"
 
     InternalServerError:
@@ -223,7 +233,7 @@ security:
   - opaqueBearerToken: []
 
 paths:
-  # /rti-templates — collection endpoints
+  # /rti-templates
   /rti-templates:
     # Create a new RTI template
     post:
@@ -243,7 +253,7 @@ paths:
               $ref: "#/components/schemas/RTITemplateRequest"
             encoding:
               file:
-                contentType: application/pdf, application/vnd.openxmlformats-officedocument.wordprocessingml.document, application/msword
+                contentType: application/pdf, image/jpeg, image/png, image/webp
       responses:
         "201":
           description: RTI template created successfully.
@@ -300,7 +310,7 @@ paths:
         "500":
           $ref: "#/components/responses/InternalServerError"
 
-  # /rti-templates/{id} — single resource endpoints
+  # /rti-templates/{id}
   /rti-templates/{id}:
     # Get a single RTI template by ID
     get:
@@ -367,7 +377,7 @@ paths:
                   description: Optional. New file to replace the existing one on GitHub.
             encoding:
               file:
-                contentType: application/pdf, application/vnd.openxmlformats-officedocument.wordprocessingml.document, application/msword
+                contentType: application/pdf, image/jpeg, image/png, image/webp
       responses:
         "200":
           description: RTI template updated successfully.
@@ -394,7 +404,7 @@ paths:
     delete:
       summary: Delete an RTI template
       operationId: deleteRTITemplate
-      description: Permanently deletes an RTI template by UUID. Returns 204 No Content on success.
+      description: Permanently deletes an RTI template by UUID. Returns 204 No Content on success. If the resource is linked with some other resources, cannot be deleted.
       tags:
         - RTI Templates
       security:
@@ -408,5 +418,7 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
         "500":
           $ref: "#/components/responses/InternalServerError"
