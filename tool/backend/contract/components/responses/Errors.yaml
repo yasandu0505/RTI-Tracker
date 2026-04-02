@@ -1,0 +1,59 @@
+Unauthorized:
+  description: Missing or invalid bearer token.
+  content:
+    application/json:
+      schema:
+        $ref: "../schemas/common.yaml#/ErrorResponse"
+      example:
+        status: 401
+        error: Unauthorized
+        message: "Not an authenticated user"
+        timestamp: "2026-03-31T09:00:00Z"
+
+NotFound:
+  description: The requested RTI template was not found.
+  content:
+    application/json:
+      schema:
+        $ref: "../schemas/common.yaml#/ErrorResponse"
+      example:
+        status: 404
+        error: Not Found
+        message: "RTI template with id '3fa85f64-5717-4562-b3fc-2c963f66afa6' was not found."
+        timestamp: "2026-03-31T09:00:00Z"
+
+UnprocessableEntity:
+  description: Validation error in the request payload.
+  content:
+    application/json:
+      schema:
+        $ref: "../schemas/common.yaml#/ErrorResponse"
+      example:
+        status: 422
+        error: Unprocessable Entity
+        message: "Validation failed: file must be a supported document type."
+        timestamp: "2026-03-31T09:00:00Z"
+
+Conflict:
+  description: Cannot process because of a conflict.
+  content:
+    application/json:
+      schema:
+        $ref: "../schemas/common.yaml#/ErrorResponse"
+      example:
+        status: 409
+        error: Resource Conflict
+        message: "Template deletion failed: Due to resource conflict"
+        timestamp: "2026-03-31T09:00:00Z"
+
+InternalServerError:
+  description: Unexpected server-side error.
+  content:
+    application/json:
+      schema:
+        $ref: "../schemas/common.yaml#/ErrorResponse"
+      example:
+        status: 500
+        error: Internal Server Error
+        message: "An unexpected error occurred. Please try again later."
+        timestamp: "2026-03-31T09:00:00Z"
