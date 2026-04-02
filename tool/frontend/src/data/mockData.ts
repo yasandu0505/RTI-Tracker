@@ -1,4 +1,6 @@
 import { Template } from '../types/rti';
+import { Institution, Position, Receiver } from '../types/db';
+
 
 export const mockTemplates: Template[] = [
   {
@@ -36,3 +38,58 @@ export const mockTemplates: Template[] = [
   { id: 'new14', title: 'Telecom License Renewals', description: 'Inquiry on fiber optic rollout', file: '', content: '# Telecom Inquiry\n{{date}}', createdAt: new Date(), updatedAt: new Date() },
   { id: 'new15', title: 'Police Department Vacancies', description: 'Open positions in city police', file: '', content: '# Vacancy Status\n{{date}}', createdAt: new Date(), updatedAt: new Date() }
 ];
+
+export const mockInstitutions: Institution[] = [
+  { id: 'inst-1', name: 'Ministry of Finance', createdAt: new Date(), updatedAt: new Date() },
+  { id: 'inst-2', name: 'Ministry of Defense', createdAt: new Date(), updatedAt: new Date() },
+  { id: 'inst-3', name: 'Department of Revenue', createdAt: new Date(), updatedAt: new Date() },
+  { id: 'inst-4', name: 'Municipal Corporation', createdAt: new Date(), updatedAt: new Date() },
+  { id: 'inst-5', name: 'State Electricity Board', createdAt: new Date(), updatedAt: new Date() },
+];
+
+export const mockPositions: Position[] = [
+  { id: 'pos-1', name: 'Public Information Officer', createdAt: new Date(), updatedAt: new Date() },
+  { id: 'pos-2', name: 'Appellate Authority', createdAt: new Date(), updatedAt: new Date() },
+  { id: 'pos-3', name: 'Nodal Officer', createdAt: new Date(), updatedAt: new Date() },
+  { id: 'pos-4', name: 'Chief Financial Officer', createdAt: new Date(), updatedAt: new Date() },
+  { id: 'pos-5', name: 'Executive Engineer', createdAt: new Date(), updatedAt: new Date() },
+];
+
+export const mockReceivers: Receiver[] = [
+  {
+    id: 'rec-1',
+    institutionId: 'inst-1',
+    positionId: 'pos-1',
+    email: 'pio.finance@gov.in',
+    contactNo: '011-23095228',
+    address: 'North Block, New Delhi',
+    institutionName: 'Ministry of Finance',
+    positionName: 'Public Information Officer',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  {
+    id: 'rec-2',
+    institutionId: 'inst-2',
+    positionId: 'pos-2',
+    email: 'aa.defense@gov.in',
+    contactNo: '011-23012284',
+    address: 'South Block, New Delhi',
+    institutionName: 'Ministry of Defense',
+    positionName: 'Appellate Authority',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  {
+    id: 'rec-3',
+    institutionId: 'inst-3',
+    positionId: 'pos-3',
+    email: 'nodal.revenue@nic.in',
+    contactNo: '011-23092653',
+    address: 'Revenue Department, Gate No. 4, New Delhi',
+    institutionName: 'Department of Revenue',
+    positionName: 'Nodal Officer',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+];
