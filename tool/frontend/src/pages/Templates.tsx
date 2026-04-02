@@ -6,8 +6,8 @@ import { Save, Plus, Move, Trash2, X } from 'lucide-react';
 
 export function Templates() {
   const [templates, setTemplates] = useState<Template[]>(mockTemplates);
-  const [selectedTemplate, setSelectedTemplate] = useState<Template>(
-    mockTemplates[0]
+  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(
+    mockTemplates.length > 0 ? mockTemplates[0] : null
   );
   
   const editorRef = useRef<HTMLDivElement>(null);
@@ -54,13 +54,15 @@ export function Templates() {
 
   // Sync editor when template changes
   useEffect(() => {
-    if (editorRef.current) {
-      editorRef.current.innerHTML = parseMarkdownToHtml(selectedTemplate.content);
+    if (selectedTemplate) {
+      if (editorRef.current) {
+        editorRef.current.innerHTML = parseMarkdownToHtml(selectedTemplate.content);
+      }
+      setEditedName(selectedTemplate.name);
     }
-    setEditedName(selectedTemplate.name);
   }, [selectedTemplate]);
 
-  const handleSelect = (template: Template) => {
+  const handleSelect = (template: Template | null) => {
     setSelectedTemplate(template);
   };
 
@@ -76,7 +78,7 @@ export function Templates() {
   };
 
   const saveTemplate = () => {
-    if (!editorRef.current) return;
+    if (!editorRef.current || !selectedTemplate) return;
     const markdown = serializeHtmlToMarkdown(editorRef.current.innerHTML);
     const updatedTemplates = templates.map((t: Template) =>
       t.id === selectedTemplate.id
@@ -94,11 +96,12 @@ export function Templates() {
   };
 
   const deleteTemplate = (id: string) => {
-    if (templates.length <= 1) return;
     if (confirm('Delete this template?')) {
       const remaining = templates.filter((t: Template) => t.id !== id);
       setTemplates(remaining);
-      if (selectedTemplate.id === id) handleSelect(remaining[0]);
+      if (selectedTemplate?.id === id) {
+        handleSelect(remaining.length > 0 ? remaining[0] : null);
+      }
     }
   };
 
@@ -196,9 +199,11 @@ export function Templates() {
             Manage Markdown templates for RTI generation.
           </p>
         </div>
-        <Button onClick={addNewTemplate} className="flex items-center gap-2">
-          <Plus className="w-4 h-4" /> New Template
-        </Button>
+        {templates.length > 0 && (
+          <Button onClick={addNewTemplate} className="flex items-center gap-2">
+            <Plus className="w-4 h-4" /> New Template
+          </Button>
+        )}
       </div>
 
       <div className="flex-1 flex gap-6 overflow-hidden">
@@ -213,12 +218,12 @@ export function Templates() {
                 <button
                   onClick={() => handleSelect(template)}
                   className={`w-full text-left p-4 border-b border-gray-100 text-sm transition-all relative ${
-                    selectedTemplate.id === template.id
+                    selectedTemplate?.id === template.id
                       ? 'bg-blue-50 text-blue-900 font-medium'
                       : 'hover:bg-gray-50 text-gray-600'
                   }`}
                 >
-                  {selectedTemplate.id === template.id && (
+                  {selectedTemplate?.id === template.id && (
                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600" />
                   )}
                   {template.name}
@@ -237,45 +242,59 @@ export function Templates() {
           </div>
         </div>
 
-        {/* Smart Editor */}
+        {/* Smart Editor or Empty State */}
         <div className="flex-1 flex flex-col bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden relative">
-          <div className="p-3 border-b border-gray-200 bg-white flex justify-between items-center z-10">
-            <div className="flex items-center gap-2 flex-1">
-              {isEditingName ? (
-                <input
-                  autoFocus
-                  className="text-sm font-semibold text-gray-700 bg-gray-50 px-2 py-1 rounded border border-blue-200 focus:outline-none"
-                  value={editedName}
-                  onChange={(e) => setEditedName(e.target.value)}
-                  onBlur={() => setIsEditingName(false)}
-                />
-              ) : (
-                <span
-                  onClick={() => setIsEditingName(true)}
-                  className="font-semibold text-sm text-gray-700 cursor-pointer hover:bg-gray-50 px-2 py-1 rounded"
-                >
-                  {editedName}
-                </span>
-              )}
+          {templates.length > 0 && selectedTemplate ? (
+            <>
+              <div className="p-3 border-b border-gray-200 bg-white flex justify-between items-center z-10">
+                <div className="flex items-center gap-2 flex-1">
+                  {isEditingName ? (
+                    <input
+                      autoFocus
+                      className="text-sm font-semibold text-gray-700 bg-gray-50 px-2 py-1 rounded border border-blue-200 focus:outline-none"
+                      value={editedName}
+                      onChange={(e) => setEditedName(e.target.value)}
+                      onBlur={() => setIsEditingName(false)}
+                    />
+                  ) : (
+                    <span
+                      onClick={() => setIsEditingName(true)}
+                      className="font-semibold text-sm text-gray-700 cursor-pointer hover:bg-gray-50 px-2 py-1 rounded"
+                    >
+                      {editedName}
+                    </span>
+                  )}
+                </div>
+                <Button size="sm" variant="primary" onClick={saveTemplate} className="flex items-center gap-2">
+                  <Save className="w-4 h-4" /> Save Template
+                </Button>
+              </div>
+              
+              <div 
+                ref={editorRef}
+                contentEditable
+                suppressContentEditableWarning
+                onDrop={onDrop}
+                onDragOver={(e) => e.preventDefault()}
+                className="flex-1 p-8 bg-white overflow-y-auto outline-none text-[16px] text-gray-800 leading-relaxed white-space-pre-wrap cursor-text empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400 empty:before:pointer-events-none empty:before:italic"
+                style={{ whiteSpace: 'pre-wrap' }}
+                data-placeholder="Start typing your template here..."
+              />
+            </>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-gray-50/50">
+              <p className="text-gray-500 mb-4 max-w-sm">
+                Get started by creating a new template.
+              </p>
+              <Button onClick={addNewTemplate} className="flex items-center gap-2">
+                <Plus className="w-4 h-4" /> Create Template
+              </Button>
             </div>
-            <Button size="sm" variant="primary" onClick={saveTemplate} className="flex items-center gap-2">
-              <Save className="w-4 h-4" /> Save Template
-            </Button>
-          </div>
-          
-          <div 
-            ref={editorRef}
-            contentEditable
-            suppressContentEditableWarning
-            onDrop={onDrop}
-            onDragOver={(e) => e.preventDefault()}
-            className="flex-1 p-8 bg-white overflow-y-auto outline-none text-[16px] text-gray-800 leading-relaxed white-space-pre-wrap cursor-text empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400 empty:before:pointer-events-none empty:before:italic"
-            style={{ whiteSpace: 'pre-wrap' }}
-            data-placeholder="Start typing your template here..."
-          />
+          )}
         </div>
 
         {/* Variables */}
+        {templates.length > 0 && (
         <div className="w-72 flex flex-col bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex-shrink-0">
           <div className="p-3 border-b border-gray-200 bg-gray-50/50 font-semibold text-xs uppercase tracking-wider text-gray-500">
             Variables
@@ -305,6 +324,7 @@ export function Templates() {
             ))}
           </div>
         </div>
+        )}
       </div>
     </div>
   );
