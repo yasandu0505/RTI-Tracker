@@ -9,7 +9,7 @@ export function Templates() {
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(
     mockTemplates.length > 0 ? mockTemplates[0] : null
   );
-  
+
   const editorRef = useRef<HTMLDivElement>(null);
 
   const [isEditingName, setIsEditingName] = useState(false);
@@ -40,7 +40,7 @@ export function Templates() {
   const serializeHtmlToMarkdown = (html: string) => {
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = html;
-    
+
     // Replace pill spans with their data-code attribute
     const pills = tempDiv.querySelectorAll('.pill-chip');
     pills.forEach((pill) => {
@@ -112,7 +112,7 @@ export function Templates() {
   const insertHtmlAtSelection = (html: string, selection: Selection | null) => {
     if (!selection || selection.rangeCount === 0) return;
     const range = selection.getRangeAt(0);
-    
+
     // Check if the user dropped inside an existing pill
     let container = range.startContainer;
     if (container.nodeType === Node.TEXT_NODE) {
@@ -127,20 +127,20 @@ export function Templates() {
     // Create a temporary container for our new HTML
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = html;
-    
+
     const fragment = document.createDocumentFragment();
     let node;
     while ((node = tempDiv.firstChild)) {
       fragment.appendChild(node);
     }
-    
+
     // Make sure we have a text node (an invisible zero-width character) to place the cursor onto
     const spaceNode = document.createTextNode('\u200B');
     fragment.appendChild(spaceNode);
-    
+
     range.deleteContents(); // Deletes any text the user currently has highlighted
     range.insertNode(fragment);// Inserts the new variable
-    
+
     // Force the cursor position right after the space node
     range.setStartAfter(spaceNode);
     range.setEndAfter(spaceNode);
@@ -152,7 +152,7 @@ export function Templates() {
     e.preventDefault();
     const data = e.dataTransfer.getData('application/json');
     if (!data) return;
-    
+
     const variable = JSON.parse(data);
     const pillHtml = createPillHtml(variable.code, variable.name);
 
@@ -168,7 +168,7 @@ export function Templates() {
         range.setStart(pos.offsetNode, pos.offset);
         range.collapse(true);
       }
-    } 
+    }
     // Fallback to older webkit/blink way (Chrome/Edge/Safari)
     // @ts-ignore
     else if (document.caretRangeFromPoint) {
@@ -191,7 +191,7 @@ export function Templates() {
   };
 
   return (
-    <div className="h-[calc(100vh-8rem)] flex flex-col space-y-4">
+    <div className="h-[calc(100vh-3rem)] flex flex-col space-y-4">
       <div className="flex justify-between items-end">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Template Manager</h1>
@@ -206,41 +206,42 @@ export function Templates() {
         )}
       </div>
 
-      <div className="flex-1 flex gap-6 overflow-hidden">
+      <div className="flex-1 flex gap-4 overflow-hidden">
         {/* Sidebar */}
-        <div className="w-64 flex flex-col bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex-shrink-0">
-          <div className="p-3 border-b border-gray-200 bg-gray-50/50 font-semibold text-xs uppercase tracking-wider text-gray-500">
-            Saved Templates
-          </div>
-          <div className="flex-1 overflow-y-auto">
-            {templates.map((template: Template) => (
-              <div key={template.id} className="group relative">
-                <button
-                  onClick={() => handleSelect(template)}
-                  className={`w-full text-left p-4 border-b border-gray-100 text-sm transition-all relative ${
-                    selectedTemplate?.id === template.id
+        {templates.length > 0 && (
+          <div className="w-60 flex flex-col bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex-shrink-0">
+            <div className="p-3 border-b border-gray-200 bg-gray-50/50 font-semibold text-xs uppercase tracking-wider text-gray-500">
+              Saved Templates
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              {templates.map((template: Template) => (
+                <div key={template.id} className="group relative">
+                  <button
+                    onClick={() => handleSelect(template)}
+                    className={`w-full text-left p-4 border-b border-gray-100 text-sm transition-all relative ${selectedTemplate?.id === template.id
                       ? 'bg-blue-50 text-blue-900 font-medium'
                       : 'hover:bg-gray-50 text-gray-600'
-                  }`}
-                >
-                  {selectedTemplate?.id === template.id && (
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600" />
-                  )}
-                  {template.name}
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    deleteTemplate(template.id);
-                  }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
+                      }`}
+                  >
+                    {selectedTemplate?.id === template.id && (
+                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-600" />
+                    )}
+                    {template.name}
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteTemplate(template.id);
+                    }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Smart Editor or Empty State */}
         <div className="flex-1 flex flex-col bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden relative">
@@ -269,8 +270,8 @@ export function Templates() {
                   <Save className="w-4 h-4" /> Save Template
                 </Button>
               </div>
-              
-              <div 
+
+              <div
                 ref={editorRef}
                 contentEditable
                 suppressContentEditableWarning
@@ -295,35 +296,35 @@ export function Templates() {
 
         {/* Variables */}
         {templates.length > 0 && (
-        <div className="w-72 flex flex-col bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex-shrink-0">
-          <div className="p-3 border-b border-gray-200 bg-gray-50/50 font-semibold text-xs uppercase tracking-wider text-gray-500">
-            Variables
-          </div>
-          <div className="p-4 bg-blue-50/50 border-b border-blue-100">
-            <p className="text-[11px] text-blue-700 leading-tight">
-              <strong>Tip:</strong> Click a variable to insert it at your cursor, or drag and drop it into the editor.
-            </p>
-          </div>
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
-            {variables.map((v) => (
-              <div
-                key={v.name}
-                draggable
-                onDragStart={(e) => onDragStart(e, v)}
-                onClick={() => insertVariableAtCursor(v)}
-                className="group cursor-pointer bg-white border border-gray-200 rounded-lg p-3 hover:border-blue-400 hover:shadow-sm transition-all"
-              >
-                <div className="flex items-center gap-2">
-                  <div className="p-1 bg-blue-50 rounded text-blue-600">
-                    <Move className="w-3.5 h-3.5" />
+          <div className="w-60 flex flex-col bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex-shrink-0">
+            <div className="p-3 border-b border-gray-200 bg-gray-50/50 font-semibold text-xs uppercase tracking-wider text-gray-500">
+              Variables
+            </div>
+            <div className="p-4 bg-blue-50/50 border-b border-blue-100">
+              <p className="text-[11px] text-blue-700 leading-tight">
+                <strong>Tip:</strong> Click a variable to insert it at your cursor, or drag and drop it into the editor.
+              </p>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {variables.map((v) => (
+                <div
+                  key={v.name}
+                  draggable
+                  onDragStart={(e) => onDragStart(e, v)}
+                  onClick={() => insertVariableAtCursor(v)}
+                  className="group cursor-pointer bg-white border border-gray-200 rounded-lg p-3 hover:border-blue-400 hover:shadow-sm transition-all"
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="p-1 bg-blue-50 rounded text-blue-600">
+                      <Move className="w-3.5 h-3.5" />
+                    </div>
+                    <span className="text-sm font-bold text-gray-900">{v.name}</span>
                   </div>
-                  <span className="text-sm font-bold text-gray-900">{v.name}</span>
+                  <p className="text-xs text-gray-500 mt-1">{v.desc}</p>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">{v.desc}</p>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
         )}
       </div>
     </div>
