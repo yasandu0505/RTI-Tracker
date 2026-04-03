@@ -1,0 +1,56 @@
+openapi: 3.1.0
+
+info:
+  title: RTI Template API
+  description: |
+    API for managing RTI (Right to Information) Templates.
+    Templates can be created with an attached file that is stored on GitHub.
+    All endpoints are protected via opaque bearer token authentication.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local development server
+
+security:
+  - opaqueBearerToken: []
+
+paths:
+  /rti-templates:
+    $ref: "./paths/rti-templates.yaml#/~1rti-templates"
+  /rti-templates/{id}:
+    $ref: "./paths/rti-templates.yaml#/~1rti-templates~1{id}"
+
+components:
+  securitySchemes:
+    opaqueBearerToken:
+      $ref: "./components/securitySchemes/security.yaml#/opaqueBearerToken"
+  schemas:
+    RTITemplateRequest:
+      $ref: "./components/schemas/RTITemplates.yaml#/RTITemplateRequest"
+    RTITemplateResponse:
+      $ref: "./components/schemas/RTITemplates.yaml#/RTITemplateResponse"
+    RTITemplateListResponse:
+      $ref: "./components/schemas/RTITemplates.yaml#/RTITemplateListResponse"
+    Pagination:
+      $ref: "./components/schemas/common.yaml#/Pagination"
+    ErrorResponse:
+      $ref: "./components/schemas/common.yaml#/ErrorResponse"
+  responses:
+    Unauthorized:
+      $ref: "./components/responses/Errors.yaml#/Unauthorized"
+    NotFound:
+      $ref: "./components/responses/Errors.yaml#/NotFound"
+    UnprocessableEntity:
+      $ref: "./components/responses/Errors.yaml#/UnprocessableEntity"
+    Conflict:
+      $ref: "./components/responses/Errors.yaml#/Conflict"
+    InternalServerError:
+      $ref: "./components/responses/Errors.yaml#/InternalServerError"
+  parameters:
+    TemplateId:
+      $ref: "./components/parameters/Templates.yaml#/TemplateId"
+    PageParam:
+      $ref: "./components/parameters/Pagination.yaml#/PageParam"
+    PageSizeParam:
+      $ref: "./components/parameters/Pagination.yaml#/PageSizeParam"
