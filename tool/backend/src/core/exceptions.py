@@ -25,6 +25,13 @@ class UnauthorizedException(BaseAPIException):
     def __init__(self, message: str = "Not an authenticated user"):
         super().__init__(message)
 
+class ForbiddenException(BaseAPIException):
+    status_code = status.HTTP_403_FORBIDDEN
+    error_code = "Forbidden"
+    
+    def __init__(self, message: str = "Permission denied for this resource"):
+        super().__init__(message)
+
 class NotFoundException(BaseAPIException):
     status_code = status.HTTP_404_NOT_FOUND
     error_code = "Not Found"

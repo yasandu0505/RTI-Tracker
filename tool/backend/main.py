@@ -1,3 +1,4 @@
+from src.utils.http_client import http_client
 from src.routers import rti_template_router
 import logging
 from fastapi import FastAPI
@@ -12,7 +13,9 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Lifespan connection starting...")
+    await http_client.start()
     yield
+    await http_client.close()
     logger.info("Lifespan connection ending...")
 
 app = FastAPI(
