@@ -1,6 +1,10 @@
 from pydantic_settings import SettingsConfigDict, BaseSettings
 
 class Settings(BaseSettings):
+    
+    # allowed origins
+    ALLOWED_ORIGINS: str
+
     # postgre configuration
     POSTGRES_HOST: str
     POSTGRES_USER: str
