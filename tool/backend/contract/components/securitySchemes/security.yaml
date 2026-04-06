@@ -1,0 +1,6 @@
+opaqueBearerToken:
+  type: http
+  scheme: bearer
+  bearerFormat: opaque
+  description: |
+    Opaque bearer token. Pass as `Authorization: Bearer <token>`.
