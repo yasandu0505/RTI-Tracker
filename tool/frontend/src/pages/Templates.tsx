@@ -45,12 +45,16 @@ export function Templates() {
     fetchTemplates(1);
   }, []);
 
-  const variables = [
+ const variables = [
     { name: 'date', code: '{{date}}', desc: 'Current Date' },
     { name: 'sender_name', code: '{{sender_name}}', desc: 'Applicant Name' },
-    { name: 'receiver_name', code: '{{receiver_name}}', desc: 'Institution Name' },
+    { name: 'sender_email', code: '{{sender_email}}', desc: 'Applicant Email' },
+    { name: 'sender_address', code: '{{sender_address}}', desc: 'Applicant Address' },
+    { name: 'sender_contact_no', code: '{{sender_contact_no}}', desc: 'Applicant Contact No' },
     { name: 'receiver_position', code: '{{receiver_position}}', desc: 'Target Position' },
-    { name: 'reference_id', code: '{{reference_id}}', desc: 'Auto-generated ID' }
+    { name: 'receiver_email', code: '{{receiver_email}}', desc: 'Receiver Email' },
+    { name: 'receiver_address', code: '{{receiver_address}}', desc: 'Receiver Address' },
+    { name: 'receiver_contact_no', code: '{{receiver_contact_no}}', desc: 'Receiver Contact No' },
   ];
 
   // Helper to create a pill element
