@@ -3,6 +3,7 @@ import { Institution, Position, Receiver } from '../types/db';
 
 const SLEEP_MS = 500;
 
+// TODO: Remove this after implementing the actual API
 const sleep = () => new Promise(resolve => setTimeout(resolve, SLEEP_MS));
 
 // Keep local mutable copies for the mock service
@@ -11,22 +12,27 @@ let institutions = [...mockInstitutions];
 let positions = [...mockPositions];
 
 export const receiversService = {
-  async listReceivers(page: number, limit: number) {
+  async listReceivers(page: number, pageSize: number) {
     await sleep();
-    const start = (page - 1) * limit;
-    const end = start + limit;
+
+    // mocking response for pagination
+    const start = (page - 1) * pageSize;
+    const end = start + pageSize;
     return {
       data: receivers.slice(start, end),
       pagination: {
         page,
-        totalPages: Math.ceil(receivers.length / limit),
-        totalItems: receivers.length
+        pageSize,
+        totalItems: receivers.length,
+        totalPages: Math.ceil(receivers.length / pageSize)
       }
     };
   },
 
   async createReceiver(payload: Partial<Receiver>) {
     await sleep();
+
+    // mocking response for create
     const inst = institutions.find(i => i.id === payload.institutionId);
     const pos = positions.find(p => p.id === payload.positionId);
     
@@ -48,6 +54,8 @@ export const receiversService = {
 
   async updateReceiver(id: string, payload: Partial<Receiver>) {
     await sleep();
+
+    //mocking response for update
     const inst = institutions.find(i => i.id === payload.institutionId);
     const pos = positions.find(p => p.id === payload.positionId);
 
@@ -68,16 +76,17 @@ export const receiversService = {
     receivers = receivers.filter(r => r.id !== id);
   },
 
-  async listInstitutions(page: number, limit: number) {
+  async listInstitutions(page: number, pageSize: number) {
     await sleep();
-    const start = (page - 1) * limit;
-    const end = start + limit;
+    const start = (page - 1) * pageSize;
+    const end = start + pageSize;
     return {
       data: institutions.slice(start, end),
       pagination: {
         page,
-        totalPages: Math.ceil(institutions.length / limit),
-        totalItems: institutions.length
+        pageSize,
+        totalItems: institutions.length,
+        totalPages: Math.ceil(institutions.length / pageSize)
       }
     };
   },
@@ -111,16 +120,17 @@ export const receiversService = {
     institutions = institutions.filter(i => i.id !== id);
   },
 
-  async listPositions(page: number, limit: number) {
+  async listPositions(page: number, pageSize: number) {
     await sleep();
-    const start = (page - 1) * limit;
-    const end = start + limit;
+    const start = (page - 1) * pageSize;
+    const end = start + pageSize;
     return {
       data: positions.slice(start, end),
       pagination: {
         page,
-        totalPages: Math.ceil(positions.length / limit),
-        totalItems: positions.length
+        pageSize,
+        totalItems: positions.length,
+        totalPages: Math.ceil(positions.length / pageSize)
       }
     };
   },

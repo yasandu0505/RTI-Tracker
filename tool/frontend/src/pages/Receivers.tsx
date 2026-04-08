@@ -1,13 +1,14 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useState } from 'react';
 import toast from 'react-hot-toast';
-import { Plus} from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { Button } from '../components/Button';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Modal } from '../components/Modal';
 import { SearchableSelect } from '../components/SearchableSelect';
-import { DataTable} from '../components/DataTable';
+import { DataTable } from '../components/DataTable';
 import { receiversService } from '../services/receiversService';
 import { Institution, Position, Receiver } from '../types/db';
+import { useEntityData } from '../hooks/useEntityData';
 
 type TabKey = 'receivers' | 'institutions' | 'positions';
 
@@ -26,14 +27,40 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
   );
 }
 
+function SectionHeader({ title, onAdd }: { title: string; onAdd: () => void }) {
+  return (
+    <div className="p-3 border-b border-gray-200 bg-gray-50/50 flex items-center justify-between gap-3">
+      <div className="font-semibold text-xs uppercase tracking-wider text-gray-500">{title} List</div>
+      <Button onClick={onAdd} size="sm" className="flex items-center gap-2 whitespace-nowrap">
+        <Plus className="w-4 h-4" /> New {title}
+      </Button>
+    </div>
+  );
+}
+
 export function Receivers() {
   const [tab, setTab] = useState<TabKey>('receivers');
 
-  // Receivers
-  const [receivers, setReceivers] = useState<Receiver[]>([]);
-  const [receiversLoading, setReceiversLoading] = useState(true);
-  const [receiversPagination, setReceiversPagination] = useState({ page: 1, totalPages: 1 });
-  const [receiverDeleteId, setReceiverDeleteId] = useState<string | null>(null);
+  // Entities Data
+  const { 
+    data: receivers, loading: receiversLoading, pagination: receiversPagination, 
+    loadData: loadReceivers, confirmDelete: deleteReceiver 
+  } = useEntityData(receiversService.listReceivers, receiversService.removeReceiver, 'Receiver');
+
+  const { 
+    data: institutions, loading: institutionsLoading, pagination: institutionsPagination, 
+    loadData: loadInstitutions, confirmDelete: deleteInstitution 
+  } = useEntityData(receiversService.listInstitutions, receiversService.removeInstitution, 'Institution');
+
+  const { 
+    data: positions, loading: positionsLoading, pagination: positionsPagination, 
+    loadData: loadPositions, confirmDelete: deletePosition 
+  } = useEntityData(receiversService.listPositions, receiversService.removePosition, 'Position');
+
+  // Deletion state
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; type: TabKey } | null>(null);
+
+  // Receiver Form/Modal
   const [receiverEdit, setReceiverEdit] = useState<Receiver | null>(null);
   const [receiverModalOpen, setReceiverModalOpen] = useState(false);
   const [receiverForm, setReceiverForm] = useState({
@@ -44,91 +71,30 @@ export function Receivers() {
     address: ''
   });
 
-  // Institutions
-  const [institutions, setInstitutions] = useState<Institution[]>([]);
-  const [institutionsLoading, setInstitutionsLoading] = useState(true);
-  const [institutionsPagination, setInstitutionsPagination] = useState({ page: 1, totalPages: 1 });
-  const [institutionDeleteId, setInstitutionDeleteId] = useState<string | null>(null);
-  const [institutionEdit, setInstitutionEdit] = useState<Institution | null>(null);
-  const [institutionModalOpen, setInstitutionModalOpen] = useState(false);
-  const [institutionName, setInstitutionName] = useState('');
-
-  // Positions
-  const [positions, setPositions] = useState<Position[]>([]);
-  const [positionsLoading, setPositionsLoading] = useState(true);
-  const [positionsPagination, setPositionsPagination] = useState({ page: 1, totalPages: 1 });
-  const [positionDeleteId, setPositionDeleteId] = useState<string | null>(null);
-  const [positionEdit, setPositionEdit] = useState<Position | null>(null);
-  const [positionModalOpen, setPositionModalOpen] = useState(false);
-  const [positionName, setPositionName] = useState('');
+  // Institution/Position Shared Modal
+  const [nameModal, setNameModal] = useState<{ open: boolean; edit: Institution | Position | null; type: 'institution' | 'position'; name: string }>({
+    open: false,
+    edit: null,
+    type: 'institution',
+    name: ''
+  });
 
   // Redirection
   const [isRedirecting, setIsRedirecting] = useState<'institution' | 'position' | null>(null);
 
   const startInstitutionRedirect = (name: string) => {
     setIsRedirecting('institution');
-    setInstitutionName(name);
-    setInstitutionEdit(null);
-    setInstitutionModalOpen(true);
+    setNameModal({ open: true, edit: null, type: 'institution', name });
     setReceiverModalOpen(false);
     setTab('institutions');
   };
 
   const startPositionRedirect = (name: string) => {
     setIsRedirecting('position');
-    setPositionName(name);
-    setPositionEdit(null);
-    setPositionModalOpen(true);
+    setNameModal({ open: true, edit: null, type: 'position', name });
     setReceiverModalOpen(false);
     setTab('positions');
   };
-
-  const loadReceivers = async (page = 1) => {
-    setReceiversLoading(true);
-    try {
-      const res = await receiversService.listReceivers(page, 10);
-      setReceivers(res.data);
-      setReceiversPagination(res.pagination);
-    } catch (e) {
-      toast.error((e as Error).message || 'Failed to load receivers');
-    } finally {
-      setReceiversLoading(false);
-    }
-  };
-
-  const loadInstitutions = async (page = 1) => {
-    setInstitutionsLoading(true);
-    try {
-      const res = await receiversService.listInstitutions(page, 10);
-      setInstitutions(res.data);
-      setInstitutionsPagination(res.pagination);
-    } catch (e) {
-      toast.error((e as Error).message || 'Failed to load institutions');
-    } finally {
-      setInstitutionsLoading(false);
-    }
-  };
-
-  const loadPositions = async (page = 1) => {
-    setPositionsLoading(true);
-    try {
-      const res = await receiversService.listPositions(page, 10);
-      setPositions(res.data);
-      setPositionsPagination(res.pagination);
-    } catch (e) {
-      toast.error((e as Error).message || 'Failed to load positions');
-    } finally {
-      setPositionsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadReceivers(1);
-    loadInstitutions(1);
-    loadPositions(1);
-  }, []);
-
-  const receiverModalTitle = useMemo(() => (receiverEdit ? 'Edit Receiver' : 'New Receiver'), [receiverEdit]);
 
   const openReceiverCreate = () => {
     setReceiverEdit(null);
@@ -177,126 +143,67 @@ export function Receivers() {
     }
   };
 
-  const confirmReceiverDelete = async () => {
-    if (!receiverDeleteId) return;
-    const id = receiverDeleteId;
-    setReceiverDeleteId(null);
-    try {
-      await receiversService.removeReceiver(id);
-      toast.success('Receiver deleted');
-      const pageToFetch =
-        receivers.length === 1 && receiversPagination.page > 1 ? receiversPagination.page - 1 : receiversPagination.page;
-      await loadReceivers(pageToFetch);
-    } catch (e) {
-      toast.error((e as Error).message || 'Failed to delete receiver');
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirm) return;
+    const { id, type } = deleteConfirm;
+    setDeleteConfirm(null);
+
+    if (type === 'receivers') await deleteReceiver(id);
+    else if (type === 'institutions') await deleteInstitution(id);
+    else if (type === 'positions') await deletePosition(id);
+  };
+
+  const openNameModal = (type: 'institution' | 'position', item?: Institution | Position) => {
+    setNameModal({
+      open: true,
+      edit: item || null,
+      type,
+      name: item?.name || ''
+    });
+  };
+
+  const closeNameModal = () => {
+    setNameModal(s => ({ ...s, open: false, edit: null }));
+    if (isRedirecting) {
+      setTab('receivers');
+      setReceiverModalOpen(true);
+      setIsRedirecting(null);
     }
   };
 
-  const institutionModalTitle = useMemo(() => (institutionEdit ? 'Edit Institution' : 'New Institution'), [institutionEdit]);
-
-  const openInstitutionCreate = () => {
-    setInstitutionEdit(null);
-    setInstitutionName('');
-    setInstitutionModalOpen(true);
-  };
-
-  const openInstitutionEdit = (i: Institution) => {
-    setInstitutionEdit(i);
-    setInstitutionName(i.name);
-    setInstitutionModalOpen(true);
-  };
-
-  const saveInstitution = async () => {
-    const trimmed = institutionName.trim();
+  const saveNameEntity = async () => {
+    const { type, name, edit } = nameModal;
+    const trimmed = name.trim();
     if (!trimmed) return toast.error('Name is required');
+
+    const source = type === 'institution' ? institutions : positions;
+    const isDuplicate = source.some(i => i.name.toLowerCase() === trimmed.toLowerCase() && i.id !== edit?.id);
+    if (isDuplicate) return toast.error(`A ${type} with this name already exists`);
+
     try {
-      if (institutionEdit) {
-        await receiversService.updateInstitution(institutionEdit.id, { name: trimmed });
-        toast.success('Institution updated');
+      let res;
+      if (type === 'institution') {
+        if (edit) await receiversService.updateInstitution(edit.id, { name: trimmed });
+        else res = await receiversService.createInstitution({ name: trimmed });
+        await loadInstitutions(institutionsPagination.page);
       } else {
-        const res = await receiversService.createInstitution({ name: trimmed });
-        toast.success('Institution created');
-        if (isRedirecting === 'institution') {
-          setReceiverForm((s) => ({ ...s, institutionId: res.id }));
-          setTab('receivers');
-          setReceiverModalOpen(true);
-          setIsRedirecting(null);
-        }
+        if (edit) await receiversService.updatePosition(edit.id, { name: trimmed });
+        else res = await receiversService.createPosition({ name: trimmed });
+        await loadPositions(positionsPagination.page);
       }
-      setInstitutionModalOpen(false);
-      setInstitutionEdit(null);
-      await loadInstitutions(institutionsPagination.page);
-    } catch (e) {
-      toast.error((e as Error).message || 'Failed to save institution');
-    }
-  };
 
-  const confirmInstitutionDelete = async () => {
-    if (!institutionDeleteId) return;
-    const id = institutionDeleteId;
-    setInstitutionDeleteId(null);
-    try {
-      await receiversService.removeInstitution(id);
-      toast.success('Institution deleted');
-      const pageToFetch =
-        institutions.length === 1 && institutionsPagination.page > 1 ? institutionsPagination.page - 1 : institutionsPagination.page;
-      await loadInstitutions(pageToFetch);
-    } catch (e) {
-      toast.error((e as Error).message || 'Failed to delete institution');
-    }
-  };
-
-  const positionModalTitle = useMemo(() => (positionEdit ? 'Edit Position' : 'New Position'), [positionEdit]);
-
-  const openPositionCreate = () => {
-    setPositionEdit(null);
-    setPositionName('');
-    setPositionModalOpen(true);
-  };
-
-  const openPositionEdit = (p: Position) => {
-    setPositionEdit(p);
-    setPositionName(p.name);
-    setPositionModalOpen(true);
-  };
-
-  const savePosition = async () => {
-    const trimmed = positionName.trim();
-    if (!trimmed) return toast.error('Name is required');
-    try {
-      if (positionEdit) {
-        await receiversService.updatePosition(positionEdit.id, { name: trimmed });
-        toast.success('Position updated');
-      } else {
-        const res = await receiversService.createPosition({ name: trimmed });
-        toast.success('Position created');
-        if (isRedirecting === 'position') {
-          setReceiverForm((s) => ({ ...s, positionId: res.id }));
-          setTab('receivers');
-          setReceiverModalOpen(true);
-          setIsRedirecting(null);
-        }
+      toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} ${edit ? 'updated' : 'created'}`);
+      
+      if (!edit && isRedirecting === type && res) {
+        setReceiverForm(s => ({ ...s, [`${type}Id`]: res.id }));
+        setTab('receivers');
+        setReceiverModalOpen(true);
+        setIsRedirecting(null);
       }
-      setPositionModalOpen(false);
-      setPositionEdit(null);
-      await loadPositions(positionsPagination.page);
+      
+      setNameModal(s => ({ ...s, open: false, edit: null }));
     } catch (e) {
-      toast.error((e as Error).message || 'Failed to save position');
-    }
-  };
-
-  const confirmPositionDelete = async () => {
-    if (!positionDeleteId) return;
-    const id = positionDeleteId;
-    setPositionDeleteId(null);
-    try {
-      await receiversService.removePosition(id);
-      toast.success('Position deleted');
-      const pageToFetch =
-        positions.length === 1 && positionsPagination.page > 1 ? positionsPagination.page - 1 : positionsPagination.page;
-      await loadPositions(pageToFetch);
-    } catch (e) {
-      toast.error((e as Error).message || 'Failed to delete position');
+      toast.error((e as Error).message || `Failed to save ${type}`);
     }
   };
 
@@ -310,129 +217,94 @@ export function Receivers() {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <TabButton active={tab === 'receivers'} onClick={() => setTab('receivers')}>
-          Receivers
-        </TabButton>
-        <TabButton active={tab === 'institutions'} onClick={() => setTab('institutions')}>
-          Institutions
-        </TabButton>
-        <TabButton active={tab === 'positions'} onClick={() => setTab('positions')}>
-          Positions
-        </TabButton>
+        {(['receivers', 'institutions', 'positions'] as TabKey[]).map(t => (
+          <TabButton key={t} active={tab === t} onClick={() => setTab(t)}>
+            {t.charAt(0).toUpperCase() + t.slice(1)}
+          </TabButton>
+        ))}
       </div>
 
-      {tab === 'receivers' && (
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-          <div className="p-3 border-b border-gray-200 bg-gray-50/50 flex items-center justify-between gap-3">
-            <div className="font-semibold text-xs uppercase tracking-wider text-gray-500">Receiver List</div>
-            <Button onClick={openReceiverCreate} size="sm" className="flex items-center gap-2 whitespace-nowrap">
-              <Plus className="w-4 h-4" /> New Receiver
-            </Button>
-          </div>
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+        {tab === 'receivers' && (
+          <>
+            <SectionHeader title="Receiver" onAdd={openReceiverCreate} />
+            <DataTable
+              data={receivers}
+              columns={[
+                { header: 'Institution', accessor: 'institutionName', className: 'font-medium text-gray-900' },
+                { header: 'Position', accessor: 'positionName', className: 'text-gray-700' },
+                { header: 'Email', accessor: 'email', className: 'text-gray-600' },
+                { header: 'Contact No', accessor: 'contactNo', className: 'text-gray-600' },
+                { header: 'Address', accessor: 'address', className: 'text-gray-600' },
+              ]}
+              onEdit={openReceiverEdit}
+              onDelete={(r) => setDeleteConfirm({ id: r.id, type: 'receivers' })}
+              loading={receiversLoading}
+              loadingMessage="Loading receivers..."
+              emptyMessage="No receivers found."
+              rowKey="id"
+              currentPage={receiversPagination.page}
+              totalPages={receiversPagination.totalPages}
+              onPageChange={loadReceivers}
+            />
+          </>
+        )}
 
-          <DataTable
-            data={receivers}
-            columns={[
-              { header: 'Institution', accessor: 'institutionName', className: 'font-medium text-gray-900' },
-              { header: 'Position', accessor: 'positionName', className: 'text-gray-700' },
-              { header: 'Email', accessor: 'email', className: 'text-gray-600' },
-              { header: 'Contact No', accessor: 'contactNo', className: 'text-gray-600' },
-              { header: 'Address', accessor: 'address', className: 'text-gray-600' },
-            ]}
-            onEdit={openReceiverEdit}
-            onDelete={(r) => setReceiverDeleteId(r.id)}
-            loading={receiversLoading}
-            loadingMessage="Loading receivers..."
-            emptyMessage="No receivers found."
-            rowKey="id"
-            currentPage={receiversPagination.page}
-            totalPages={receiversPagination.totalPages}
-            onPageChange={(p) => loadReceivers(p)}
-          />
-        </div>
-      )}
+        {tab === 'institutions' && (
+          <>
+            <SectionHeader title="Institution" onAdd={() => openNameModal('institution')} />
+            <DataTable
+              data={institutions}
+              columns={[{ header: 'Name', accessor: 'name', className: 'font-medium text-gray-900' }]}
+              onEdit={(i) => openNameModal('institution', i)}
+              onDelete={(i) => setDeleteConfirm({ id: i.id, type: 'institutions' })}
+              loading={institutionsLoading}
+              loadingMessage="Loading institutions..."
+              emptyMessage="No institutions found."
+              rowKey="id"
+              currentPage={institutionsPagination.page}
+              totalPages={institutionsPagination.totalPages}
+              onPageChange={loadInstitutions}
+            />
+          </>
+        )}
 
-      {tab === 'institutions' && (
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-          <div className="p-3 border-b border-gray-200 bg-gray-50/50 flex items-center justify-between gap-3">
-            <div className="font-semibold text-xs uppercase tracking-wider text-gray-500">Institution List</div>
-            <Button onClick={openInstitutionCreate} size="sm" className="flex items-center gap-2 whitespace-nowrap">
-              <Plus className="w-4 h-4" /> New Institution
-            </Button>
-          </div>
-
-          <DataTable
-            data={institutions}
-            columns={[
-              { header: 'Name', accessor: 'name', className: 'font-medium text-gray-900' },
-            ]}
-            onEdit={openInstitutionEdit}
-            onDelete={(i) => setInstitutionDeleteId(i.id)}
-            loading={institutionsLoading}
-            loadingMessage="Loading institutions..."
-            emptyMessage="No institutions found."
-            rowKey="id"
-            currentPage={institutionsPagination.page}
-            totalPages={institutionsPagination.totalPages}
-            onPageChange={(p) => loadInstitutions(p)}
-          />
-        </div>
-      )}
-
-      {tab === 'positions' && (
-        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-          <div className="p-3 border-b border-gray-200 bg-gray-50/50 flex items-center justify-between gap-3">
-            <div className="font-semibold text-xs uppercase tracking-wider text-gray-500">Position List</div>
-            <Button onClick={openPositionCreate} size="sm" className="flex items-center gap-2 whitespace-nowrap">
-              <Plus className="w-4 h-4" /> New Position
-            </Button>
-          </div>
-
-          <DataTable
-            data={positions}
-            columns={[
-              { header: 'Name', accessor: 'name', className: 'font-medium text-gray-900' },
-            ]}
-            onEdit={openPositionEdit}
-            onDelete={(p) => setPositionDeleteId(p.id)}
-            loading={positionsLoading}
-            loadingMessage="Loading positions..."
-            emptyMessage="No positions found."
-            rowKey="id"
-            currentPage={positionsPagination.page}
-            totalPages={positionsPagination.totalPages}
-            onPageChange={(p) => loadPositions(p)}
-          />
-        </div>
-      )}
+        {tab === 'positions' && (
+          <>
+            <SectionHeader title="Position" onAdd={() => openNameModal('position')} />
+            <DataTable
+              data={positions}
+              columns={[{ header: 'Name', accessor: 'name', className: 'font-medium text-gray-900' }]}
+              onEdit={(p) => openNameModal('position', p)}
+              onDelete={(p) => setDeleteConfirm({ id: p.id, type: 'positions' })}
+              loading={positionsLoading}
+              loadingMessage="Loading positions..."
+              emptyMessage="No positions found."
+              rowKey="id"
+              currentPage={positionsPagination.page}
+              totalPages={positionsPagination.totalPages}
+              onPageChange={loadPositions}
+            />
+          </>
+        )}
+      </div>
 
       <ConfirmDialog
-        open={!!receiverDeleteId}
-        title="Delete Receiver?"
-        message="Are you sure you want to delete this receiver? This action cannot be undone."
-        onCancel={() => setReceiverDeleteId(null)}
-        onConfirm={confirmReceiverDelete}
+        open={!!deleteConfirm}
+        title={`Delete ${deleteConfirm?.type.slice(0, -1)}?`}
+        message={`Are you sure you want to delete this ${deleteConfirm?.type.slice(0, -1)}? This action cannot be undone.`}
+        onCancel={() => setDeleteConfirm(null)}
+        onConfirm={handleConfirmDelete}
         confirmText="Delete"
       />
 
       <Modal
         open={receiverModalOpen}
-        title={receiverModalTitle}
-        onClose={() => {
-          setReceiverModalOpen(false);
-          setReceiverEdit(null);
-        }}
+        title={receiverEdit ? 'Edit Receiver' : 'New Receiver'}
+        onClose={() => { setReceiverModalOpen(false); setReceiverEdit(null); }}
         footer={
           <>
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setReceiverModalOpen(false);
-                setReceiverEdit(null);
-              }}
-            >
-              Cancel
-            </Button>
+            <Button variant="secondary" onClick={() => { setReceiverModalOpen(false); setReceiverEdit(null); }}>Cancel</Button>
             <Button onClick={saveReceiver}>{receiverEdit ? 'Save Changes' : 'Create Receiver'}</Button>
           </>
         }
@@ -487,43 +359,20 @@ export function Receivers() {
               placeholder="Address (optional)"
             />
           </div>
-          <div className="md:col-span-2">
-            <p className="text-xs text-gray-500">
-              Note: Per database rules, at least one of <strong>Email</strong> or <strong>Contact No</strong> must be
-              provided.
-            </p>
+          <div className="md:col-span-2 text-xs text-gray-500">
+            Note: Per database rules, at least one of <strong>Email</strong> or <strong>Contact No</strong> must be provided.
           </div>
         </div>
       </Modal>
 
-      <ConfirmDialog
-        open={!!institutionDeleteId}
-        title="Delete Institution?"
-        message="Are you sure you want to delete this institution? This action cannot be undone."
-        onCancel={() => setInstitutionDeleteId(null)}
-        onConfirm={confirmInstitutionDelete}
-        confirmText="Delete"
-      />
-
       <Modal
-        open={institutionModalOpen}
-        title={institutionModalTitle}
-        onClose={() => {
-          setInstitutionModalOpen(false);
-          setInstitutionEdit(null);
-        }}
+        open={nameModal.open}
+        title={`${nameModal.edit ? 'Edit' : 'New'} ${nameModal.type.charAt(0).toUpperCase() + nameModal.type.slice(1)}`}
+        onClose={closeNameModal}
         footer={
           <>
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setInstitutionModalOpen(false);
-                setInstitutionEdit(null);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button onClick={saveInstitution}>{institutionEdit ? 'Save Changes' : 'Create Institution'}</Button>
+            <Button variant="secondary" onClick={closeNameModal}>Cancel</Button>
+            <Button onClick={saveNameEntity}>{nameModal.edit ? 'Save Changes' : `Create ${nameModal.type.charAt(0).toUpperCase() + nameModal.type.slice(1)}`}</Button>
           </>
         }
       >
@@ -531,51 +380,9 @@ export function Receivers() {
           <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Name</label>
           <input
             className="px-3 py-2 rounded border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-900"
-            value={institutionName}
-            onChange={(e) => setInstitutionName(e.target.value)}
-            placeholder="Institution name"
-          />
-        </div>
-      </Modal>
-
-      <ConfirmDialog
-        open={!!positionDeleteId}
-        title="Delete Position?"
-        message="Are you sure you want to delete this position? This action cannot be undone."
-        onCancel={() => setPositionDeleteId(null)}
-        onConfirm={confirmPositionDelete}
-        confirmText="Delete"
-      />
-
-      <Modal
-        open={positionModalOpen}
-        title={positionModalTitle}
-        onClose={() => {
-          setPositionModalOpen(false);
-          setPositionEdit(null);
-        }}
-        footer={
-          <>
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setPositionModalOpen(false);
-                setPositionEdit(null);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button onClick={savePosition}>{positionEdit ? 'Save Changes' : 'Create Position'}</Button>
-          </>
-        }
-      >
-        <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Name</label>
-          <input
-            className="px-3 py-2 rounded border border-gray-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-900"
-            value={positionName}
-            onChange={(e) => setPositionName(e.target.value)}
-            placeholder="Position name"
+            value={nameModal.name}
+            onChange={(e) => setNameModal(s => ({ ...s, name: e.target.value }))}
+            placeholder={`${nameModal.type.charAt(0).toUpperCase() + nameModal.type.slice(1)} name`}
           />
         </div>
       </Modal>
