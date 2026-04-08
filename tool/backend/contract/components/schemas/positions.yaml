@@ -19,7 +19,7 @@ PositionResponse:
     name:
       type: string
       example: Minister
-      description: name of the position.
+      description: Name of the position.
     createdAt:
       type: string
       format: date-time

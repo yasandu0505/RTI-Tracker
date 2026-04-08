@@ -73,7 +73,7 @@
 /positions/{id}:
   # Get a single position by ID
   get:
-    summary: Get an position by ID
+    summary: Get a position by ID
     operationId: getPositionById
     description: Returns a single position identified by its UUID.
     tags:
@@ -103,9 +103,9 @@
 
   # Update a single position by ID
   put:
-    summary: Update an position
+    summary: Update a position
     operationId: updatePosition
-    description: Fully replaces an position.
+    description: Fully replaces a position.
     tags:
       - Position
     security:
@@ -114,7 +114,7 @@
       - $ref: "../components/parameters/Templates.yaml#/TemplateId"
     requestBody:
       required: true
-      description: JSON request body with institution metadata.
+      description: JSON request body with position metadata.
       content:
         application/json:
           schema:
@@ -142,18 +142,18 @@
 
   # Delete a single position by ID
   delete:
-    summary: Delete an position
+    summary: Delete a position
     operationId: deletePosition
-    description: Permanently deletes an position by UUID. Returns 204 No Content on success. If the resource is linked with some other resources, cannot be deleted.
+    description: Permanently deletes a position by UUID. Returns 204 No Content on success. If the resource is linked with some other resources, cannot be deleted.
     tags:
       - Position
     security:
       - opaqueBearerToken: []
     parameters:
-      - $ref: "../components/parameters/templates.yaml#/TemplateId"
+      - $ref: "../components/parameters/Templates.yaml#/TemplateId"
     responses:
       "204":
-        description: Institution deleted successfully. No content returned.
+        description: Position deleted successfully. No content returned.
       "401":
         $ref: "../components/responses/Errors.yaml#/Unauthorized"
       "404":
