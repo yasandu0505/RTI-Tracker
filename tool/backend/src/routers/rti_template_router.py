@@ -19,7 +19,7 @@ async def get_rti_templates_endpoint(
     page: int = Query(1, ge=1, description="page number"),
     page_size: int = Query(10, ge=1, le=100, description="page size"),
     service: RTITemplateService = Depends(get_rti_template_service),
-    # user: User = Depends(RoleChecker([UserRole.ADMIN, UserRole.USER]))
+    user: User = Depends(RoleChecker([UserRole.ADMIN, UserRole.USER]))
     ):
     response = service.get_rti_templates(page=page, page_size=page_size)
     return response
@@ -30,7 +30,7 @@ async def create_rti_templates_endpoint(
     file: Annotated[UploadFile, File(description="RTI Template markdown file")],
     description: Annotated[Optional[str], Form(description="Detailed description of the RTI Template")] = None,
     service: RTITemplateService = Depends(get_rti_template_service),
-    # user: User = Depends(RoleChecker([UserRole.ADMIN, UserRole.USER]))
+    user: User = Depends(RoleChecker([UserRole.ADMIN, UserRole.USER]))
 ):
     template_request = RTITemplateRequest(title=title, description=description, file=file)
     response = await service.create_rti_template(template_request=template_request)
