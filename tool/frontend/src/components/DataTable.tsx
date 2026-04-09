@@ -71,7 +71,7 @@ export function DataTable<T>({
               <tr key={getKey(item)} className="hover:bg-gray-50/50">
                 {columns.map((col, i) => (
                   <td key={i} className={`px-4 py-3 ${col.className || ''}`}>
-                    {col.render ? col.render(item) : (col.accessor ? String((item as any)[col.accessor] || '-') : '-')}
+                    {col.accessor ? String((item as any)[col.accessor] || '-') : '-'}
                   </td>
                 ))}
                 {(onEdit || onDelete) && (

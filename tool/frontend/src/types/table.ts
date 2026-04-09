@@ -1,10 +1,8 @@
-import React from 'react';
 import { Pagination } from './api';
 
 export interface Column<T> {
   header: string;
   accessor?: keyof T;
-  render?: (item: T) => React.ReactNode;
   className?: string;
   headerClassName?: string;
 }
