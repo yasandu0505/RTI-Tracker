@@ -26,7 +26,7 @@ export function Modal({ open, onClose, title, children, footer }: ModalProps) {
 
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg flex flex-col max-h-[90vh]">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl flex flex-col max-h-[90vh]">
         <div className="flex items-center justify-between p-4 border-b border-gray-100">
           <h2 className="text-lg font-bold text-gray-900">{title}</h2>
           <button

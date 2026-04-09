@@ -54,16 +54,16 @@ export function DataTable<T>({
     <div className="flex flex-col">
       {title && <TableHeader title={title} onAdd={onAdd!} />}
       
-      <div className="overflow-x-auto">
-        <table className="min-w-full text-sm">
-          <thead className="bg-white">
+      <div className="overflow-x-auto overflow-y-auto max-h-[370px]">
+        <table className="min-w-full text-sm border-separate border-spacing-0">
+          <thead className="bg-white sticky top-0 z-10">
             <tr className="text-left text-xs uppercase tracking-wider text-gray-500 border-b border-gray-100">
               {columns.map((col, i) => (
-                <th key={i} className={`px-4 py-3 ${col.headerClassName || ''}`}>
+                <th key={i} className={`px-4 py-3 bg-white border-b border-gray-100 ${col.headerClassName || ''}`}>
                   {col.header}
                 </th>
               ))}
-              {(onEdit || onDelete) && <th className="px-4 py-3 w-[140px]">Actions</th>}
+              {(onEdit || onDelete) && <th className="px-4 py-3 bg-white border-b border-gray-100 w-[140px]">Actions</th>}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
