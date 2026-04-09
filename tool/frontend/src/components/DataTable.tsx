@@ -1,31 +1,20 @@
-import React from 'react';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, Plus } from 'lucide-react';
 import { Button } from './Button';
-import { Pagination } from './Pagination';
+import { Pagination as PaginationComponent } from './Pagination';
+import { TableProps } from '../types/table';
 
-export interface Column<T> {
-  header: string;
-  accessor?: keyof T;
-  render?: (item: T) => React.ReactNode;
-  className?: string;
-  headerClassName?: string;
-}
-
-interface DataTableProps<T> {
-  data: T[];
-  columns: Column<T>[];
-  onEdit?: (item: T) => void;
-  onDelete?: (item: T) => void;
-  loading?: boolean;
-  loadingMessage?: string;
-  emptyMessage?: string;
-  rowKey: keyof T | ((item: T) => string);
-  currentPage?: number;
-  totalPages?: number;
-  onPageChange?: (page: number) => void;
-}
+const TableHeader = ({ title, onAdd }: { title: string; onAdd: () => void }) => (
+  <div className="p-3 border-b border-gray-200 bg-gray-50/50 flex items-center justify-between gap-3">
+    <div className="font-semibold text-xs uppercase tracking-wider text-gray-500">{title} List</div>
+    <Button onClick={onAdd} size="sm" className="flex items-center gap-2 whitespace-nowrap">
+      <Plus className="w-4 h-4" /> New {title}
+    </Button>
+  </div>
+);
 
 export function DataTable<T>({
+  title,
+  onAdd,
   data,
   columns,
   onEdit,
@@ -33,26 +22,38 @@ export function DataTable<T>({
   loading,
   loadingMessage = "Loading...",
   emptyMessage = "No data found.",
-  rowKey,
-  currentPage,
-  totalPages,
+  rowKey = 'id' as any,
+  pagination,
   onPageChange
-}: DataTableProps<T>) {
+}: TableProps<T>) {
+  
+  const getKey = (item: T): string => {
+    if (typeof rowKey === 'function') return rowKey(item);
+    return (item as any)[rowKey] as string;
+  };
+
   if (loading) {
-    return <div className="p-10 text-center text-sm text-gray-500">{loadingMessage}</div>;
+    return (
+      <div className="flex flex-col">
+        {title && <TableHeader title={title} onAdd={onAdd!} />}
+        <div className="p-10 text-center text-sm text-gray-500">{loadingMessage}</div>
+      </div>
+    );
   }
 
   if (data.length === 0) {
-    return <div className="p-10 text-center text-sm text-gray-500">{emptyMessage}</div>;
+    return (
+      <div className="flex flex-col">
+        {title && <TableHeader title={title} onAdd={onAdd!} />}
+        <div className="p-10 text-center text-sm text-gray-500">{emptyMessage}</div>
+      </div>
+    );
   }
-
-  const getKey = (item: T) => {
-    if (typeof rowKey === 'function') return rowKey(item);
-    return item[rowKey] as unknown as string;
-  };
 
   return (
     <div className="flex flex-col">
+      {title && <TableHeader title={title} onAdd={onAdd!} />}
+      
       <div className="overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead className="bg-white">
@@ -70,7 +71,7 @@ export function DataTable<T>({
               <tr key={getKey(item)} className="hover:bg-gray-50/50">
                 {columns.map((col, i) => (
                   <td key={i} className={`px-4 py-3 ${col.className || ''}`}>
-                    {col.render ? col.render(item) : (col.accessor ? String(item[col.accessor] || '-') : '-')}
+                    {col.render ? col.render(item) : (col.accessor ? String((item as any)[col.accessor] || '-') : '-')}
                   </td>
                 ))}
                 {(onEdit || onDelete) && (
@@ -95,11 +96,11 @@ export function DataTable<T>({
         </table>
       </div>
 
-      {totalPages && totalPages > 1 && onPageChange && (
+      {pagination && pagination.totalPages > 1 && onPageChange && (
         <div className="p-3 border-t border-gray-100 bg-gray-50/30">
-          <Pagination
-            currentPage={currentPage || 1}
-            totalPages={totalPages}
+          <PaginationComponent
+            currentPage={pagination.page}
+            totalPages={pagination.totalPages}
             onPageChange={onPageChange}
           />
         </div>

@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { Pagination, ListResponse } from '../types/common';
+import { Pagination, ListResponse } from '../types/api';
 
 export function useEntityData<T>(
   listFn: (page: number, pageSize: number) => Promise<ListResponse<T>>,
@@ -53,7 +53,7 @@ export function useEntityData<T>(
     data,
     loading,
     pagination,
-    loadData,
+    onPageChange: loadData,
     confirmDelete,
     setData,
   };
