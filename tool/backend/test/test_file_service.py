@@ -1,9 +1,10 @@
-# test/test_file_service.py
+# test_file_service.py
 import uuid
 import pytest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 from src.services.file_service import FileService
 from src.core.exceptions import BadRequestException, InternalServerException
+from github import GithubException
 
 # Helper — bare FileService instance with mocked GitHub repository
 def _make_service(
@@ -14,24 +15,45 @@ def _make_service(
     delete_file_return=None,
     delete_file_side_effect=None,
 ) -> FileService:
-    """Builds a FileService instance bypassing __init__, with a mocked GitHub repository."""
-    service = FileService.__new__(FileService)
-    service.repository = MagicMock()
-    service.github_repository_name = "test-repo"
-    service.branch = "main"
-    if create_file_side_effect:
-        service.repository.create_file.side_effect = create_file_side_effect
-    elif create_file_return is not None:
-        service.repository.create_file.return_value = create_file_return
-    if get_contents_side_effect:
-        service.repository.get_contents.side_effect = get_contents_side_effect
-    elif get_contents_return is not None:
-        service.repository.get_contents.return_value = get_contents_return
-    if delete_file_side_effect:
-        service.repository.delete_file.side_effect = delete_file_side_effect
-    elif delete_file_return is not None:
-        service.repository.delete_file.return_value = delete_file_return
-    return service
+    """Builds a FileService instance by mocking GitHub to avoid actual network calls."""
+    with patch("src.services.file_service.Github") as MockGithub:
+        mock_github_instance = MockGithub.return_value
+        mock_repo = MagicMock()
+        mock_github_instance.get_repo.return_value = mock_repo
+        
+        service = FileService()
+        
+        # Set expected mock properties for the tests
+        service.repository = mock_repo
+        service.github_repository_name = "test-repo"
+        service.branch = "main"
+
+        if create_file_side_effect:
+            service.repository.create_file.side_effect = create_file_side_effect
+        elif create_file_return is not None:
+            service.repository.create_file.return_value = create_file_return
+        if get_contents_side_effect:
+            service.repository.get_contents.side_effect = get_contents_side_effect
+        elif get_contents_return is not None:
+            service.repository.get_contents.return_value = get_contents_return
+        if delete_file_side_effect:
+            service.repository.delete_file.side_effect = delete_file_side_effect
+        elif delete_file_return is not None:
+            service.repository.delete_file.return_value = delete_file_return
+            
+        return service
+
+# service initialization test
+def test_file_service_initialization():
+    """Test that FileService correctly initializes instance attributes."""
+    # We patch Github so we don't actually hit the API or require real tokens
+    with patch("src.services.file_service.Github") as mock_github:
+        service = FileService()
+        assert hasattr(service, "github_token")
+        assert hasattr(service, "github_repository_name")
+        assert hasattr(service, "branch")
+        assert hasattr(service, "github")
+        assert hasattr(service, "repository")
 
 # upload_file tests
 @pytest.mark.asyncio
@@ -100,7 +122,7 @@ async def test_upload_file_bad_request_message_contains_content_type(make_upload
 @pytest.mark.asyncio
 async def test_upload_file_raises_internal_exception_on_github_error(make_upload_file):
     """upload_file wraps GitHub API errors in InternalServerException."""
-    service = _make_service(create_file_side_effect=Exception("GitHub API unavailable"))
+    service = _make_service(create_file_side_effect=GithubException(500, "GitHub API unavailable"))
 
     with pytest.raises(InternalServerException):
         await service.upload_file(template_id=uuid.uuid4(), file=make_upload_file())
@@ -155,7 +177,7 @@ async def test_delete_file_uses_correct_sha(make_github_content_file):
 @pytest.mark.asyncio
 async def test_delete_file_returns_false_on_github_error():
     """delete_file returns False (instead of raising) when the GitHub API fails."""
-    service = _make_service(get_contents_side_effect=Exception("GitHub unreachable"))
+    service = _make_service(get_contents_side_effect=GithubException(500, "GitHub unreachable"))
 
     result = await service.delete_file(file_path="rti-templates/some.md")
 
@@ -168,7 +190,7 @@ async def test_delete_file_returns_false_when_delete_fails(make_github_content_f
 
     service = _make_service(
         get_contents_return=content_file,
-        delete_file_side_effect=Exception("Permission denied"),
+        delete_file_side_effect=GithubException(500, "Permission denied"),
     )
 
     result = await service.delete_file(file_path="rti-templates/some.md")

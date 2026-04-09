@@ -75,7 +75,7 @@ class RTITemplateService:
 
             uploaded_file_path = relative_path  # mark that we have a committed GitHub file
 
-            # template — store the absolute GitHub URL so the DB is self-contained
+            # template — store the relative GitHub path so the DB is self-contained
             rti_template = RTITemplate(
                 id=unique_id,
                 title=template_request.title,

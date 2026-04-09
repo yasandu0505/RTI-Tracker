@@ -14,17 +14,15 @@ class FileService:
     """
 
     def __init__(self):
-        pass
+        self.github_token = settings.GITHUB_TOKEN
+        self.github_repository_name = settings.GITHUB_REPO_NAME 
+        self.branch = settings.GITHUB_BRANCH
+
+        # access github repository
+        self.github = Github(self.github_token)
+        self.repository = self.github.get_repo(self.github_repository_name)
 
     ALLOWED_FILE_TYPES = ["text/markdown"]
-
-    github_token = settings.GITHUB_TOKEN
-    github_repository_name = settings.GITHUB_REPO_NAME 
-    branch = settings.GITHUB_BRANCH
-
-    # access github repository
-    github = Github(github_token)
-    repository = github.get_repo(github_repository_name)
 
     # helper
     @staticmethod
@@ -76,7 +74,7 @@ class FileService:
                     "absolute_path": ""
                 }
 
-        except Exception as e:
+        except GithubException as e:
             logger.error(f"[FILE SERVICE] Error uploading file to github: {e}")
             raise InternalServerException("[FILE SERVICE] Failed to upload file to github") from e
     
@@ -93,7 +91,7 @@ class FileService:
             )
             logger.info(f"[FILE SERVICE] Compensating transaction: deleted {file_path} from github")
             return True
-        except Exception as e:
+        except GithubException as e:
             logger.error(f"[FILE SERVICE] Compensating transaction failed — could not delete {file_path}: {e}")
             return False
 

@@ -1,5 +1,5 @@
 
-from fastapi import UploadFile, File
+from fastapi import UploadFile
 from datetime import datetime
 from uuid import UUID
 from src.models import PaginationModel
@@ -11,7 +11,8 @@ class RTITemplateRequest(BaseModel):
     # attributes
     title: str = Field(..., description="Title of the RTI Template")
     description: Optional[str] = Field(None, description="Detailed description of the RTI Template")
-    file: UploadFile = File(..., description="RTI Template markdown file")
+    file: UploadFile = Field(..., description="RTI Template markdown file")
+    
 class RTITemplateResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True, str_strip_whitespace=True)
     # attributes
