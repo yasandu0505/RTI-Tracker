@@ -29,7 +29,7 @@
               institution_id: be7aa68e-c842-45cd-aab6-f576895b922e
               email: contact@institution.com
               address: "No:15/A, Colombo 12"
-              contact_no: "0781231231"
+              contactNo: "0781231231"
               createdAt: "2026-03-31T09:00:00Z"
               updatedAt: "2026-03-31T09:00:00Z"
       "401":
@@ -65,7 +65,7 @@
                   institution_id: be7aa68e-c842-45cd-aab6-f576895b922e
                   email: contact@institution.com
                   address: "No:15/A, Colombo 12"
-                  contact_no: "0781231231"
+                  contactNo: "0781231231"
                   createdAt: "2026-03-31T09:00:00Z"
                   updatedAt: "2026-03-31T09:00:00Z"
               pagination:
@@ -103,7 +103,7 @@
               institution_id: be7aa68e-c842-45cd-aab6-f576895b922e
               email: contact@institution.com
               address: "No:15/A, Colombo 12"
-              contact_no: "0781231231"
+              contactNo: "0781231231"
               createdAt: "2026-03-31T09:00:00Z"
               updatedAt: "2026-03-31T09:00:00Z"
       "401":
@@ -144,7 +144,7 @@
               institution_id: be7aa68e-c842-45cd-aab6-f576895b922e
               email: contact@institution.com
               address: "No:15/A, Colombo 12"
-              contact_no: "0781231231"
+              contactNo: "0781231231"
               createdAt: "2026-03-31T09:00:00Z"
               updatedAt: "2026-03-31T09:00:00Z"
       "401":
@@ -160,7 +160,9 @@
   delete:
     summary: Delete a receiver
     operationId: deleteReceiver
-    description: Permanently deletes a receiver by UUID. Returns 204 No Content on success. If the resource is linked with some other resources, cannot be deleted.
+    description: Permanently deletes a receiver by UUID. Returns 204 No Content on
+      success. If the resource is linked with some other resources, cannot be
+      deleted.
     tags:
       - Receiver
     security:
