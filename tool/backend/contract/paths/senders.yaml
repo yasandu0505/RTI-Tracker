@@ -1,31 +1,31 @@
-/sender:
+/senders:
   # Create a new sender 
   post:
     summary: Create a sender
     operationId: createSender
     description: Creates a new sender.
     tags:
-      - Sender Management
+      - Senders
     security:
       - opaqueBearerToken: []
     requestBody:
       required: true
-      description: sender details
+      description: JSON request body with sender metadata.
       content:
         application/json:
           schema:
-            $ref: "../components/schemas/sender.yaml#/Sender"
+            $ref: "../components/schemas/senders.yaml#/SenderRequest"
     responses:
       "201":
         description: sender created successfully.
         content:
           application/json:
             schema:
-              $ref: "../components/schemas/sender.yaml#/Sender"
+              $ref: "../components/schemas/senders.yaml#/SenderResponse"
             example:
               id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
               name: John Doe
-              email: [EMAIL_ADDRESS]
+              email: example@gmail.com
               address: 123 Main St, Colombo 01
               contactNumber: "0771234567"
               createdAt: "2026-03-31T09:00:00Z"
@@ -55,12 +55,12 @@
         content:
           application/json:
             schema:
-              $ref: "../components/schemas/sender.yaml#/SenderListResponse"
+              $ref: "../components/schemas/senders.yaml#/SenderListResponse"
             example:
               data:
                 - id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
                   name: John Doe
-                  email: [EMAIL_ADDRESS]
+                  email: example@gmail.com
                   address: 123 Main St, Colombo 01
                   contactNumber: "0771234567"
                   createdAt: "2026-03-31T09:00:00Z"
@@ -93,11 +93,11 @@
         content:
           application/json:
             schema:
-              $ref: "../components/schemas/sender.yaml#/Sender"
+              $ref: "../components/schemas/senders.yaml#/SenderResponse"
             example:
               id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
               name: John Doe
-              email: [EMAIL_ADDRESS]
+              email: example@gmail.com
               address: 123 Main St, Colombo 01
               contactNumber: "0771234567"
               createdAt: "2026-03-31T09:00:00Z"
@@ -126,18 +126,18 @@
       content:
         application/json:
           schema:
-            $ref: "../components/schemas/sender.yaml#/Sender"
+            $ref: "../components/schemas/senders.yaml#/SenderRequest"
     responses:
       "200":
         description: sender updated successfully.
         content:
           application/json:
             schema:
-              $ref: "../components/schemas/sender.yaml#/Sender"
+              $ref: "../components/schemas/senders.yaml#/SenderResponse"
             example:
               id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
               name: John Doe
-              email: [EMAIL_ADDRESS]
+              email: example@gmail.com
               address: 123 Main St, Colombo 01
               contactNumber: "0771234567"
               createdAt: "2026-03-31T09:00:00Z"
