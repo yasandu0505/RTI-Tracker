@@ -9,11 +9,13 @@ ReceiverRequest:
   properties:
     position_id:
       type: string
+      format: uuid
       example: be7aa68e-c842-45cd-aab6-f576895b922f
       description: Position ID in UUID format
     institution_id:
       type: string
-      example: be7aa68e-c842-45cd-aab6-f576895b922i
+      format: uuid
+      example: be7aa68e-c842-45cd-aab6-f576895b922e
       description: institution ID in UUID format
     email:
       type: string
@@ -71,7 +73,7 @@ ReceiverResponse:
       example: "2026-03-31T09:00:00Z"
       description: ISO 8601 timestamp of when the receiver was last updated (UTC).
 
-receiversListResponse:
+ReceiverListResponse:
   type: object
   properties:
     data:

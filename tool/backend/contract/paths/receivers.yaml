@@ -57,7 +57,7 @@
         content:
           application/json:
             schema:
-              $ref: "../components/schemas/receivers.yaml#/receiversListResponse"
+              $ref: "../components/schemas/receivers.yaml#/ReceiverListResponse"
             example:
               data:
                 - id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
