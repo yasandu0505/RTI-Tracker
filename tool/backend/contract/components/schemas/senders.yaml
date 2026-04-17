@@ -68,7 +68,7 @@ SenderListResponse:
     data:
       type: array
       items:
-        $ref: "#/Sender"
+        $ref: "#/SenderResponse"
       description: List of senders for the current page.
     pagination:
       $ref: "common.yaml#/Pagination"

@@ -75,7 +75,7 @@
       "500":
         $ref: "../components/responses/Errors.yaml#/InternalServerError"
 
-/sender/{id}:
+/senders/{id}:
   # Get a single sender by ID
   get:
     summary: Get an sender by ID
