@@ -27,7 +27,7 @@
               name: John Doe
               email: example@gmail.com
               address: 123 Main St, Colombo 01
-              contactNumber: "0771234567"
+              contactNo: "0771234567"
               createdAt: "2026-03-31T09:00:00Z"
               updatedAt: "2026-03-31T09:00:00Z"
       "401":
@@ -43,7 +43,7 @@
     operationId: listSenders
     description: Returns a paginated list of all senders.
     tags:
-      - Sender Management
+      - Senders
     security:
       - opaqueBearerToken: []
     parameters:
@@ -62,7 +62,7 @@
                   name: John Doe
                   email: example@gmail.com
                   address: 123 Main St, Colombo 01
-                  contactNumber: "0771234567"
+                  contactNo: "0771234567"
                   createdAt: "2026-03-31T09:00:00Z"
                   updatedAt: "2026-03-31T09:00:00Z"
               pagination:
@@ -78,18 +78,18 @@
 /senders/{id}:
   # Get a single sender by ID
   get:
-    summary: Get an sender by ID
+    summary: Get a sender by ID
     operationId: getSenderById
     description: Returns a single sender identified by its UUID.
     tags:
-      - Sender Management
+      - Senders
     security:
       - opaqueBearerToken: []
     parameters:
       - $ref: "../components/parameters/object.yaml#/ObjectId"
     responses:
       "200":
-        description: sender found and returned successfully.
+        description: Sender found and returned successfully.
         content:
           application/json:
             schema:
@@ -99,7 +99,7 @@
               name: John Doe
               email: example@gmail.com
               address: 123 Main St, Colombo 01
-              contactNumber: "0771234567"
+              contactNo: "0771234567"
               createdAt: "2026-03-31T09:00:00Z"
               updatedAt: "2026-03-31T09:00:00Z"
       "401":
@@ -111,25 +111,25 @@
 
   # Update an existing sender
   put:
-    summary: Update an sender
+    summary: Update a sender
     operationId: updateSender
     description: Fully replaces a sender.
     tags:
-      - Sender Management
+      - Senders
     security:
       - opaqueBearerToken: []
     parameters:
       - $ref: "../components/parameters/object.yaml#/ObjectId"
     requestBody:
       required: true
-      description: sender details
+      description: Sender details
       content:
         application/json:
           schema:
             $ref: "../components/schemas/senders.yaml#/SenderRequest"
     responses:
       "200":
-        description: sender updated successfully.
+        description: Sender updated successfully.
         content:
           application/json:
             schema:
@@ -139,7 +139,7 @@
               name: John Doe
               email: example@gmail.com
               address: 123 Main St, Colombo 01
-              contactNumber: "0771234567"
+              contactNo: "0771234567"
               createdAt: "2026-03-31T09:00:00Z"
               updatedAt: "2026-03-31T09:00:00Z"
       "401":
@@ -151,13 +151,13 @@
       "500":
         $ref: "../components/responses/Errors.yaml#/InternalServerError"
 
-  # Delete an sender
+  # Delete a sender
   delete:
-    summary: Delete an sender
+    summary: Delete a sender
     operationId: deleteSender
     description: Permanently deletes a sender by UUID. Returns 204 No Content on success. If the resource is linked with other resources, it cannot be deleted.
     tags:
-      - Sender Management
+      - Senders
     security:
       - opaqueBearerToken: []
     parameters:

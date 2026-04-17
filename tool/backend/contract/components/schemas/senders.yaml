@@ -1,8 +1,13 @@
 SenderResponse:
   type: object
   required:
+    - id
     - name
     - email
+    - address
+    - contactNo
+    - createdAt
+    - updatedAt
   properties:
     id:
       type: string
@@ -15,14 +20,14 @@ SenderResponse:
       example: John Doe
       description: name of the sender.
     email:
-      type: string
+      type: email
       example: example@gmail.com
       description: Email of the sender.
     address:
       type: string
       example: 123 Main St, Colombo 01
       description: Address of the sender.
-    contactNumber:
+    contactNo:
       type: string
       example: "0771234567"
       description: Contact number of the sender.
@@ -43,24 +48,26 @@ SenderRequest:
   type: object
   required:
     - name
-    - email
   properties:
     name:
       type: string
       example: John Doe
       description: name of the sender.
     email:
-      type: string
+      type: email
       example: example@gmail.com
       description: Email of the sender.
     address:
       type: string
       example: 123 Main St, Colombo 01
       description: Address of the sender.
-    contactNumber:
+    contactNo:
       type: string
       example: "0771234567"
       description: Contact number of the sender.
+  oneOf:
+    - required: [email]
+    - required: [contactNo]
 
 SenderListResponse:
   type: object
