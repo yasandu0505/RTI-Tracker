@@ -20,7 +20,8 @@ SenderResponse:
       example: John Doe
       description: name of the sender.
     email:
-      type: email
+      type: string
+      format: email
       example: example@gmail.com
       description: Email of the sender.
     address:
@@ -54,7 +55,8 @@ SenderRequest:
       example: John Doe
       description: name of the sender.
     email:
-      type: email
+      type: string
+      format: email
       example: example@gmail.com
       description: Email of the sender.
     address:
