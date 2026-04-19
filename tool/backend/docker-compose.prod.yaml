@@ -1,0 +1,10 @@
+# Production docker-compose.prod.yaml
+# Use with: docker compose -f docker-compose.yaml -f docker-compose.prod.yaml up -d
+services:
+  # fastapi server
+  server:
+    restart: always
+    # Prod command (no reload, optimized for performance)
+    # This uses the command defined in the Dockerfile
+    command: ["/app/.venv/bin/fastapi", "run", "main.py", "--port", "8000", "--host", "0.0.0.0"]
+
