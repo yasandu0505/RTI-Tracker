@@ -60,13 +60,21 @@ export function DataTable<T>({
   };
 
   let content;
-  if (loading) {
+  if (loading && data.length === 0) {
     content = <div className="p-10 text-center text-sm text-gray-500">{loadingMessage}</div>;
   } else if (data.length === 0) {
     content = <div className="p-10 text-center text-sm text-gray-500">{emptyMessage}</div>;
   } else {
     content = (
-      <div className="overflow-x-auto overflow-y-auto max-h-[370px]">
+      <div className="overflow-x-auto overflow-y-auto max-h-[370px] relative">
+        {loading && (
+          <div className="absolute inset-0 bg-white/40 z-20 flex items-center justify-center backdrop-blur-[1px]">
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-8 h-8 border-4 border-blue-900/20 border-t-blue-900 rounded-full animate-spin"></div>
+              <span className="text-xs font-semibold text-blue-900 uppercase tracking-widest">Refreshing</span>
+            </div>
+          </div>
+        )}
         <table className="min-w-full text-sm border-separate border-spacing-0">
           <thead className="bg-white sticky top-0 z-10">
             <tr className="text-left text-xs uppercase tracking-wider text-gray-500 border-b border-gray-100">

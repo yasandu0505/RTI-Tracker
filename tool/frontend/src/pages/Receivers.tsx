@@ -1,11 +1,18 @@
 import { useState, useMemo } from 'react';
 import toast from 'react-hot-toast';
+import { useForm, Controller } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import * as yup from 'yup';
+
 import { Button } from '../components/Button';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Modal } from '../components/Modal';
 import { SearchableSelect } from '../components/SearchableSelect';
 import { DataTable } from '../components/DataTable';
 import { TabButton } from '../components/TabButton';
+import { FormLabel } from '../components/FormLabel';
+import { FieldError } from '../components/FieldError';
+
 import { receiversService } from '../services/receiversService';
 import { institutionService } from '../services/institutionService';
 import { positionService } from '../services/positionService';
@@ -14,6 +21,26 @@ import { useEntityData } from '../hooks/useEntityData';
 import { Column } from '../types/table';
 
 type TabKey = 'receivers' | 'institutions' | 'positions';
+
+// Validation Schemas 
+
+const receiverSchema = yup.object().shape({
+  institutionId: yup.string().required('Institution is required'),
+  positionId: yup.string().required('Position is required'),
+  email: yup.string().nullable().transform(v => v === '' ? null : v)
+    .email('Please enter a valid email address'),
+  contactNo: yup.string().nullable().transform(v => v === '' ? null : v),
+  address: yup.string().nullable().transform(v => v === '' ? null : v),
+}).test('contact-required', 'Either Email or Contact No is required', function (value) {
+  if (!value.email && !value.contactNo) {
+    return this.createError({ path: 'email', message: 'Email or Contact No is required' });
+  }
+  return true;
+});
+
+const nameEntitySchema = yup.object({
+  name: yup.string().required('Name is required').trim(),
+});
 
 export function Receivers() {
   const [tab, setTab] = useState<TabKey>('receivers');
@@ -26,19 +53,39 @@ export function Receivers() {
   // Deletion state
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; type: TabKey } | null>(null);
 
-  // Receiver Form/Modal State
+  // Receiver Form
   const [receiverEdit, setReceiverEdit] = useState<Receiver | null>(null);
   const [receiverModalOpen, setReceiverModalOpen] = useState(false);
-  const [receiverForm, setReceiverForm] = useState({
-    institutionId: '', positionId: '', email: '', contactNo: '', address: ''
+
+  const {
+    control: receiverControl,
+    handleSubmit: handleReceiverSubmit,
+    reset: resetReceiverForm,
+    setValue: setReceiverValue,
+    formState: { errors: receiverErrors }
+  } = useForm({
+    resolver: yupResolver(receiverSchema),
+    defaultValues: {
+      institutionId: '', positionId: '', email: '', contactNo: '', address: ''
+    }
   });
 
   // Institution/Position Shared Modal State
-  const [nameModal, setNameModal] = useState<{ open: boolean; edit: Institution | Position | null; type: 'institution' | 'position'; name: string }>({
-    open: false, edit: null, type: 'institution', name: ''
+  const [nameModal, setNameModal] = useState<{ open: boolean; edit: Institution | Position | null; type: 'institution' | 'position' }>({
+    open: false, edit: null, type: 'institution'
   });
 
-  const [isRedirecting, setIsRedirecting] = useState<'institution' | 'position' | null>(null);
+  const {
+    register: registerName,
+    handleSubmit: handleNameSubmit,
+    reset: resetNameForm,
+    formState: { errors: nameErrors }
+  } = useForm({
+    resolver: yupResolver(nameEntitySchema),
+    defaultValues: { name: '' }
+  });
+
+  const [redirectType, setRedirectType] = useState<'institution' | 'position' | null>(null);
 
   // Column Definitions
   const receiverColumns: Column<Receiver>[] = useMemo(() => [
@@ -55,15 +102,16 @@ export function Receivers() {
 
   // Handlers
   const startRedirect = (type: 'institution' | 'position', name: string) => {
-    setIsRedirecting(type);
-    setNameModal({ open: true, edit: null, type, name });
+    setRedirectType(type);
+    setNameModal({ open: true, edit: null, type });
+    resetNameForm({ name: name });
     setReceiverModalOpen(false);
     setTab(type === 'institution' ? 'institutions' : 'positions');
   };
 
   const openReceiverModal = (r?: Receiver) => {
     setReceiverEdit(r || null);
-    setReceiverForm({
+    resetReceiverForm({
       institutionId: r?.institutionId || '',
       positionId: r?.positionId || '',
       email: r?.email || '',
@@ -73,78 +121,63 @@ export function Receivers() {
     setReceiverModalOpen(true);
   };
 
-  const saveReceiver = async () => {
-    const { institutionId, positionId, email, contactNo, address } = receiverForm;
-    const payload = {
-      institutionId, positionId,
-      email: email.trim() || null,
-      contactNo: contactNo.trim() || null,
-      address: address.trim() || null
-    };
-
-    if (!payload.institutionId || !payload.positionId) return toast.error('Institution and Position are required');
-    if (!payload.email && !payload.contactNo) return toast.error('Email or Contact No is required');
-
-    if (payload.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) {
-      return toast.error('Please enter a valid email address');
-    }
-
+  const onSaveReceiver = async (data: Partial<Receiver>) => {
     try {
-      if (receiverEdit) await receiversService.updateReceiver(receiverEdit.id, payload);
-      else await receiversService.createReceiver(payload);
+      if (receiverEdit) await receiversService.updateReceiver(receiverEdit.id, data);
+      else await receiversService.createReceiver(data);
 
       toast.success(`Receiver ${receiverEdit ? 'updated' : 'created'}`);
       setReceiverModalOpen(false);
-      receiversHook.onPageChange(receiversHook.pagination.page);
+      await receiversHook.refresh(true);
     } catch (e) {
       toast.error((e as Error).message || 'Failed to save receiver');
     }
   };
 
   const openNameModal = (type: 'institution' | 'position', item?: Institution | Position) => {
-    setNameModal({ open: true, edit: item || null, type, name: item?.name || '' });
+    setNameModal({ open: true, edit: item || null, type });
+    resetNameForm({ name: item?.name || '' });
   };
 
-  const saveNameEntity = async () => {
-    const { type, name, edit } = nameModal;
-    const trimmed = name.trim();
-    if (!trimmed) return toast.error('Name is required');
+  const onSaveNameEntity = async (formData: { name: string }) => {
+    const { type, edit } = nameModal;
+    const name = formData.name.trim();
 
-    // Duplicate Validation
+    // Duplicate Validation (using existing data from hooks)
     const list = type === 'institution' ? institutionsHook.data : positionsHook.data;
-    const duplicate = list.find(i => (i as any).name.toLowerCase() === trimmed.toLowerCase() && (i as any).id !== edit?.id);
+    const duplicate = list.find(i => i.name.toLowerCase() === name.toLowerCase() && i.id !== edit?.id);
 
     if (duplicate) {
-      toast.error(`${type.charAt(0).toUpperCase() + type.slice(1)} "${trimmed}" already exists.`);
-      if (!edit && isRedirecting === type) {
-        setReceiverForm(s => ({ ...s, [`${type}Id`]: (duplicate as any).id }));
+      toast.error(`${type.charAt(0).toUpperCase() + type.slice(1)} "${name}" already exists.`);
+      if (!edit && redirectType === type) {
+        setReceiverValue(`${type}Id` as any, duplicate.id);
         setTab('receivers');
         setReceiverModalOpen(true);
       }
       setNameModal(s => ({ ...s, open: false }));
-      setIsRedirecting(null);
+      setRedirectType(null);
       return;
     }
 
     try {
       let res: any;
       if (type === 'institution') {
-        res = edit ? await institutionService.updateInstitution(edit.id, { name: trimmed }) : await institutionService.createInstitution({ name: trimmed });
-        await institutionsHook.onPageChange(institutionsHook.pagination.page);
+        res = edit ? await institutionService.updateInstitution(edit.id, { name }) : await institutionService.createInstitution({ name });
+        await institutionsHook.refresh(true);
       } else {
-        res = edit ? await positionService.updatePosition(edit.id, { name: trimmed }) : await positionService.createPosition({ name: trimmed });
-        await positionsHook.onPageChange(positionsHook.pagination.page);
+        res = edit ? await positionService.updatePosition(edit.id, { name }) : await positionService.createPosition({ name });
+        await positionsHook.refresh(true);
       }
 
       toast.success(`${type} ${edit ? 'updated' : 'created'}`);
 
-      if (!edit && isRedirecting === type && res) {
-        setReceiverForm(s => ({ ...s, [`${type}Id`]: res.id }));
+      if (!edit && redirectType === type && res) {
+        setReceiverValue(`${type}Id` as any, res.id);
         setTab('receivers');
         setReceiverModalOpen(true);
       }
       setNameModal(s => ({ ...s, open: false }));
-      setIsRedirecting(null);
+      setRedirectType(null);
     } catch (e) {
       toast.error((e as Error).message || `Failed to save ${type}`);
     }
@@ -196,8 +229,8 @@ export function Receivers() {
             searchTerm={undefined}
             onSearch={undefined}
             columns={simpleEntityColumns}
-            onEdit={item => openNameModal(tab === 'institutions' ? 'institution' : 'position', item as any)}
-            onDelete={item => setDeleteConfirm({ id: (item as any).id, type: tab })}
+            onEdit={item => openNameModal(tab === 'institutions' ? 'institution' : 'position', item)}
+            onDelete={item => setDeleteConfirm({ id: item.id, type: tab })}
           />
         )}
       </div>
@@ -218,60 +251,97 @@ export function Receivers() {
         footer={
           <>
             <Button variant="secondary" onClick={() => setReceiverModalOpen(false)}>Cancel</Button>
-            <Button onClick={saveReceiver}>{receiverEdit ? 'Save Changes' : 'Create Receiver'}</Button>
+            <Button onClick={handleReceiverSubmit(onSaveReceiver)}>{receiverEdit ? 'Save Changes' : 'Create Receiver'}</Button>
           </>
         }
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Institution</label>
-            <SearchableSelect
-              placeholder="Select institution"
-              value={receiverForm.institutionId}
-              onChange={id => setReceiverForm(s => ({ ...s, institutionId: id }))}
-              options={institutionsHook.data as any}
-              onAddSpecial={n => startRedirect('institution', n)}
-              addLabel="Add Institution"
+            <FormLabel label="Institution" required />
+            <Controller
+              name="institutionId"
+              control={receiverControl}
+              render={({ field }) => (
+                <SearchableSelect
+                  placeholder="Select institution"
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={institutionsHook.data}
+                  onAddSpecial={n => startRedirect('institution', n)}
+                />
+              )}
             />
+            <FieldError error={receiverErrors.institutionId?.message} />
           </div>
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Position</label>
-            <SearchableSelect
-              placeholder="Select position"
-              value={receiverForm.positionId}
-              onChange={id => setReceiverForm(s => ({ ...s, positionId: id }))}
-              options={positionsHook.data as any}
-              onAddSpecial={n => startRedirect('position', n)}
-              addLabel="Add Position"
+            <FormLabel label="Position" required />
+            <Controller
+              name="positionId"
+              control={receiverControl}
+              render={({ field }) => (
+                <SearchableSelect
+                  placeholder="Select position"
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={positionsHook.data}
+                  onAddSpecial={n => startRedirect('position', n)}
+                />
+              )}
             />
+            <FieldError error={receiverErrors.positionId?.message} />
           </div>
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Email</label>
-            <input
-              type="email"
-              className="px-3 py-2 rounded border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-900"
-              value={receiverForm.email}
-              onChange={e => setReceiverForm(s => ({ ...s, email: e.target.value }))}
-              placeholder="receiver@example.com"
+            <FormLabel label="Email" />
+            <Controller
+              name="email"
+              control={receiverControl}
+              render={({ field }) => (
+                <input
+                  type="email"
+                  autoComplete="off"
+                  className={`px-3 py-2 rounded border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-900 ${receiverErrors.email ? 'border-red-500' : ''}`}
+                  {...field}
+                  value={field.value || ''}
+                  placeholder="receiver@example.com"
+                />
+              )}
             />
+            <FieldError error={receiverErrors.email?.message} />
           </div>
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Contact No</label>
-            <input
-              className="px-3 py-2 rounded border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-900"
-              value={receiverForm.contactNo}
-              onChange={e => setReceiverForm(s => ({ ...s, contactNo: e.target.value.replace(/[^0-9\-]/g, '') }))}
-              placeholder="Phone number"
+            <FormLabel label="Contact No" />
+            <Controller
+              name="contactNo"
+              control={receiverControl}
+              render={({ field }) => (
+                <input
+                  autoComplete="off"
+                  className={`px-3 py-2 rounded border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-900 ${receiverErrors.contactNo ? 'border-red-500' : ''}`}
+                  {...field}
+                  value={field.value || ''}
+                  onChange={e => field.onChange(e.target.value.replace(/[^0-9\-]/g, ''))}
+                  placeholder="Phone number"
+                />
+              )}
             />
+            <FieldError error={receiverErrors.contactNo?.message} />
           </div>
           <div className="flex flex-col gap-1.5 md:col-span-2">
-            <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Address</label>
-            <input
-              className="px-3 py-2 rounded border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-900"
-              value={receiverForm.address}
-              onChange={e => setReceiverForm(s => ({ ...s, address: e.target.value }))}
-              placeholder="Address (optional)"
+            <FormLabel label="Address" />
+            <Controller
+              name="address"
+              control={receiverControl}
+              render={({ field }) => (
+                <input
+                  autoComplete="off"
+                  className={`px-3 py-2 rounded border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-900 ${receiverErrors.address ? 'border-red-500' : ''}`}
+                  {...field}
+                  value={field.value || ''}
+                  placeholder="Address (optional)"
+                />
+              )}
             />
+            <FieldError error={receiverErrors.address?.message} />
           </div>
         </div>
       </Modal>
@@ -283,18 +353,18 @@ export function Receivers() {
         footer={
           <>
             <Button variant="secondary" onClick={() => setNameModal(s => ({ ...s, open: false }))}>Cancel</Button>
-            <Button onClick={saveNameEntity}>{nameModal.edit ? 'Save Changes' : 'Create'}</Button>
+            <Button onClick={handleNameSubmit(onSaveNameEntity)}>{nameModal.edit ? 'Save Changes' : 'Create'}</Button>
           </>
         }
       >
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Name</label>
+          <FormLabel label="Name" required />
           <input
-            className="px-3 py-2 rounded border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-900"
-            value={nameModal.name}
-            onChange={e => setNameModal(s => ({ ...s, name: e.target.value }))}
+            className={`px-3 py-2 rounded border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-900 ${nameErrors.name ? 'border-red-500' : ''}`}
+            {...registerName('name')}
             placeholder="Name"
           />
+          <FieldError error={nameErrors.name?.message} />
         </div>
       </Modal>
     </div>
