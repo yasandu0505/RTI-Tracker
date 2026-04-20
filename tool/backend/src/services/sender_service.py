@@ -6,21 +6,18 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class SenderService:
     """
     This service is responsible for executing all sender related operations
     """
 
-    def __init__ (self, session: Session):
+    def __init__(self, session: Session):
         self.session = session
-    
+
     # API
     # create sender
-    def create_sender(
-        self,
-        *,
-        template_request: SenderRequest
-    ) -> SenderResponse:
+    def create_sender(self, *, template_request: SenderRequest) -> SenderResponse:
         try:
             # generate a uuid
             unique_id = uuid4()
@@ -31,7 +28,7 @@ class SenderService:
                 name=template_request.name,
                 email=template_request.email,
                 address=template_request.address,
-                contactNo=template_request.contactNo
+                contact_no=template_request.contact_no,
             )
 
             self.session.add(sender)
@@ -45,6 +42,6 @@ class SenderService:
         except Exception as e:
             self.session.rollback()
             logger.error(f"[SENDER SERVICE] Error creating sender: {e}")
-            raise InternalServerException(f"[SENDER SERVICE] Failed to create sender: {e}") from e
-
-    
+            raise InternalServerException(
+                f"[SENDER SERVICE] Failed to create sender: {e}"
+            ) from e

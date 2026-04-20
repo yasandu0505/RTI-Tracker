@@ -1,8 +1,9 @@
 from pydantic import BaseModel, ConfigDict, Field
 from uuid import UUID
 from datetime import datetime
-from typing import Optional ,Sequence
+from typing import Optional, Sequence
 from src.models import PaginationModel
+
 
 class SenderResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True, str_strip_whitespace=True)
@@ -19,7 +20,7 @@ class SenderResponse(BaseModel):
     address: Optional[str] = Field(
         None, example="123 Main St, Colombo 01", description="Address of the sender"
     )
-    contactNo: Optional[str] = Field(
+    contact_no: Optional[str] = Field(
         None, example="0771234567", description="Contact number of the sender"
     )
     created_at: datetime = Field(
@@ -32,6 +33,7 @@ class SenderResponse(BaseModel):
         example="2026-03-31T09:00:00Z",
         description="ISO 8601 timestamp of when the sender was last updated",
     )
+
 
 class SenderListResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True, str_strip_whitespace=True)
