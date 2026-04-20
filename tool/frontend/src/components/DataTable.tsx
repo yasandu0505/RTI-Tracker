@@ -48,16 +48,10 @@ export function DataTable<T>({
   loading,
   loadingMessage = "Loading...",
   emptyMessage = "No data found.",
-  rowKey = 'id' as any,
   pagination,
   onPageChange,
   onPageSizeChange
 }: TableProps<T>) {
-
-  const getKey = (item: T): string => {
-    if (typeof rowKey === 'function') return rowKey(item);
-    return (item as any)[rowKey] as string;
-  };
 
   let content;
   if (loading && data.length === 0) {
@@ -88,7 +82,7 @@ export function DataTable<T>({
           </thead>
           <tbody className="divide-y divide-gray-100">
             {data.map((item) => (
-              <tr key={getKey(item)} className="hover:bg-gray-50/50">
+              <tr key={(item as any).id} className="hover:bg-gray-50/50">
                 {columns.map((col, i) => (
                   <td key={i} className={`px-4 py-3 ${col.className || ''}`}>
                     {col.accessor ? String((item as any)[col.accessor] ?? '-') : '-'}

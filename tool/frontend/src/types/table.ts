@@ -15,7 +15,6 @@ export interface TableProps<T> {
   loading?: boolean;
   loadingMessage?: string;
   emptyMessage?: string;
-  rowKey?: keyof T | ((item: T) => string);
   pagination?: Pagination;
   onPageChange?: (page: number) => void;
   onPageSizeChange?: (pageSize: number) => void;
