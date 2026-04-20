@@ -1,0 +1,22 @@
+from pydantic import BaseModel, Field, ConfigDict, EmailStr, model_validator
+from typing import Optional
+
+class SenderRequest(BaseModel):
+    model_config = ConfigDict(from_attributes=True, str_strip_whitespace=True)
+    # attributes
+    name: str = Field(..., example="John Doe", description="Name of the sender.")
+    email: Optional[EmailStr] = Field(
+        None, example="example@gmail.com", description="Email of the sender."
+    )
+    address: Optional[str] = Field(
+        None, example="123 Main St, Colombo 01", description="Address of the sender."
+    )
+    contactNo: Optional[str] = Field(
+        None, example="0771234567", description="Contact number of the sender."
+    )
+    # either email or contactNo must be provided
+    @model_validator(mode="after")
+    def validate_email_or_contact(self):
+        if not self.email and not self.contactNo:
+            raise ValueError("Either email or contactNo must be provided.")
+        return self
