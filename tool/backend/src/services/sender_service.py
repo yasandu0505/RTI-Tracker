@@ -1,8 +1,10 @@
 from sqlmodel import Session
 from src.models import SenderRequest, SenderResponse, Sender
-from src.core.exceptions import InternalServerException, BadRequestException
+from src.core.exceptions import InternalServerException, BadRequestException, ConflictException
 from uuid import uuid4
 import logging
+from sqlalchemy.exc import IntegrityError
+import psycopg2
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +39,22 @@ class SenderService:
 
             return SenderResponse.model_validate(sender)
 
+        except IntegrityError as e:
+            self.session.rollback()
+            # detect unique constraint
+            if isinstance(e.orig, psycopg2.errors.UniqueViolation):
+                constraint = e.orig.diag.constraint_name
+
+                if constraint == "senders_email_key":
+                    raise ConflictException("Email already exists")
+
+                elif constraint == "senders_contact_no_key":
+                    raise ConflictException("Contact number already exists")
+
+                else:
+                    raise ConflictException("Duplicate values violates unique constraint")
+
+            raise
         except BadRequestException:
             raise
         except Exception as e:
