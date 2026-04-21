@@ -1,6 +1,18 @@
 from fastapi import Request, status
 from fastapi.responses import JSONResponse
-from src.models.common import ErrorResponse
+from pydantic import BaseModel, ConfigDict, Field
+from datetime import datetime, timezone
+
+class ErrorResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True, str_strip_whitespace=True)
+    # attributes
+    status: int = Field(..., description="HTTP status code")
+    error: str = Field(..., description="Short error category")
+    message: str = Field(..., description="Human-readable error detail")
+    timestamp: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        description="ISO 8601 timestamp of when the error occurred (UTC)"
+    )
 
 class BaseAPIException(Exception):
     """Base exception for all API errors."""
@@ -51,13 +63,6 @@ class NotFoundException(BaseAPIException):
     error_code = "Not Found"
     
     def __init__(self, message: str = "The requested resource was not found."):
-        super().__init__(message)
-
-class ConflictException(BaseAPIException):
-    status_code = status.HTTP_409_CONFLICT
-    error_code = "Resource Conflict"
-    
-    def __init__(self, message: str = "A resource conflict occurred."):
         super().__init__(message)
 
 class UnprocessableEntityException(BaseAPIException):
