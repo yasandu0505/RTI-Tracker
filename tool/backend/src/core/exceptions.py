@@ -72,7 +72,7 @@ class NotFoundException(BaseAPIException):
         super().__init__(message)
 
 class UnprocessableEntityException(BaseAPIException):
-    status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
+    status_code = status.HTTP_422_UNPROCESSABLE_CONTENT
     error_code = "Unprocessable Entity"
     
     def __init__(self, message: str = "Validation failed."):
