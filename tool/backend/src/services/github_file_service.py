@@ -135,7 +135,7 @@ class GithubFileService:
             contents = self.repository.get_contents(file_path, ref=self.branch)
             self.repository.delete_file(
                 path=file_path,
-                message=f"Rollback: remove orphaned file {file_path}",
+                message=f"Remove file {file_path}",
                 sha=contents.sha,
                 branch=self.branch
             )
@@ -175,5 +175,22 @@ class GithubFileService:
             return True
         except GithubException as e:
             logger.error(f"[FILE SERVICE] Compensating transaction failed — could not restore {template_id}.md: {e}")
+            return False
+
+    # recreate file
+    async def recreate_file(self, template_id: uuid.UUID, content: bytes) -> bool:
+        """Recreates a file that was previously deleted. Used as a compensating transaction."""
+        try:
+            file_path = f"rti-templates/{template_id}.md"
+            self.repository.create_file(
+                path=file_path,
+                message=f"Recreate file {template_id}.md",
+                content=content,
+                branch=self.branch
+            )
+            logger.info(f"[FILE SERVICE] Compensating transaction: recreated {file_path} on github")
+            return True
+        except GithubException as e:
+            logger.error(f"[FILE SERVICE] Compensating transaction failed — could not recreate {template_id}.md: {e}")
             return False
 

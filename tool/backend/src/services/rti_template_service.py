@@ -4,10 +4,10 @@ from src.services.github_file_service import GithubFileService
 from src.models import RTITemplate, PaginationModel
 from src.models.response_models import RTITemplateListResponse, RTITemplateResponse
 from src.models.request_models import RTITemplateRequest
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import select, func, Session
-from src.core.exceptions import InternalServerException, BadRequestException, NotFoundException
+from src.core.exceptions import InternalServerException, BadRequestException, NotFoundException, ConflictException
 import logging
-import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -164,5 +164,67 @@ class RTITemplateService:
 
             logger.error(f"[RTI SERVICE] Error updating RTI template: {e}")
             raise InternalServerException(f"[RTI SERVICE] Failed to update RTI template: {e}") from e
+
+     # API
+    async def delete_rti_template(
+        self,
+        *,
+        template_id,
+    ) -> Dict:
+        try:
+            # 1. Resolve ID
+            try:
+                target_id = UUID(template_id) if isinstance(template_id, str) else template_id
+            except ValueError:
+                raise BadRequestException(f"Invalid UUID format: {template_id}")
+
+            # 2. Fetch the record
+            rti_template = self.session.get(RTITemplate, target_id)
+            if not rti_template:
+                raise NotFoundException(f"RTI Template with id {template_id} not found.")
+
+            file_path = rti_template.file
+            old_file_data: Dict | None = None
+
+            try:
+                # 3. Fetch file content for potential rollback
+                if file_path:
+                    old_file_data = await self.file_service.get_file(rti_template.id)
+
+                # 4. Delete file from GitHub
+                if file_path:
+                    await self.file_service.delete_file(file_path=file_path)
+
+                # 5. Delete record from DB
+                self.session.delete(rti_template)
+                self.session.commit()
+
+                return {"message": "RTI Template deleted successfully"}
+
+            except IntegrityError:
+                self.session.rollback()
+                # Rollback: Recreate the file if it was deleted
+                if old_file_data:
+                    await self.file_service.recreate_file(
+                        template_id=target_id,
+                        content=old_file_data["content"]
+                    )
+                raise ConflictException("Cannot delete RTI Template because it is used in existing RTI Requests.")
+            except Exception as e:
+                self.session.rollback()
+                # Rollback: Recreate the file if it was deleted
+                if old_file_data:
+                    await self.file_service.recreate_file(
+                        template_id=target_id,
+                        content=old_file_data["content"]
+                    )
+                logger.error(f"[RTI SERVICE] Error deleting RTI template: {e}")
+                raise InternalServerException(f"[RTI SERVICE] Failed to delete RTI template: {e}") from e
+
+        except (BadRequestException, NotFoundException, ConflictException):
+            raise
+        except Exception as e:
+            logger.error(f"[RTI SERVICE] Error in delete operation: {e}")
+            raise InternalServerException(f"[RTI SERVICE] Failed to process delete request: {e}") from e
             
 

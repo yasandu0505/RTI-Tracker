@@ -242,7 +242,7 @@ async def test_delete_file_success(make_github_content_file):
     service.repository.get_contents.assert_called_once_with(file_path, ref="main")
     service.repository.delete_file.assert_called_once_with(
         path=file_path,
-        message=f"Rollback: remove orphaned file {file_path}",
+        message=f"Remove file {file_path}",
         sha="deadbeef",
         branch="main"
     )
