@@ -27,9 +27,9 @@ type TabKey = 'receivers' | 'institutions' | 'positions';
 const receiverSchema = yup.object().shape({
   institutionId: yup.string().required('Institution is required'),
   positionId: yup.string().required('Position is required'),
-  email: yup.string().nullable().transform(v => v === '' ? null : v)
+  email: yup.string().trim().nullable().transform(v => v === '' ? null : v)
     .matches(/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, 'Please enter a valid email address'),
-  contactNo: yup.string().nullable().transform(v => v === '' ? null : v)
+  contactNo: yup.string().trim().nullable().transform(v => v === '' ? null : v)
     .test('is-sl-phone', 'Please enter a valid Sri Lankan phone number', value => {
       if (!value) return true;
       const clean = value.replace(/-/g, '');
