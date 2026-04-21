@@ -3,7 +3,8 @@
   post:
     summary: Create an RTI request
     operationId: createRTIRequest
-    description: Creates a new RTI request record linking a sender, receiver, and optionally an RTI template.
+    description: Creates a new RTI request record linking a sender, receiver, and
+      optionally an RTI template.
     tags:
       - RTI Requests
     security:
@@ -25,7 +26,8 @@
             example:
               id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
               title: Request for Budget Information 2024
-              description: Requesting documents related to the 2024 healthcare budget regarding medical supplies.
+              description: Requesting documents related to the 2024 healthcare budget
+                regarding medical supplies.
               senderId: 3fa85f64-5717-4562-b3fc-2c963f66afa6
               receiverId: f47ac10b-58cc-4372-a567-0e02b2c3d479
               rtiTemplateId: b9d02c84-8f1b-4835-9730-84a28f804561
@@ -61,7 +63,8 @@
               data:
                 - id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
                   title: Request for Budget Information 2024
-                  description: Requesting documents related to the 2024 healthcare budget regarding medical supplies.
+                  description: Requesting documents related to the 2024 healthcare budget
+                    regarding medical supplies.
                   senderId: 3fa85f64-5717-4562-b3fc-2c963f66afa6
                   receiverId: f47ac10b-58cc-4372-a567-0e02b2c3d479
                   rtiTemplateId: b9d02c84-8f1b-4835-9730-84a28f804561
@@ -99,7 +102,8 @@
             example:
               id: 3fa85f64-5717-4562-b3fc-2c963f66afa6
               title: Request for Budget Information 2024
-              description: Requesting documents related to the 2024 healthcare budget regarding medical supplies.
+              description: Requesting documents related to the 2024 healthcare budget
+                regarding medical supplies.
               senderId: 3fa85f64-5717-4562-b3fc-2c963f66afa6
               receiverId: f47ac10b-58cc-4372-a567-0e02b2c3d479
               rtiTemplateId: b9d02c84-8f1b-4835-9730-84a28f804561
@@ -159,7 +163,9 @@
   delete:
     summary: Delete an RTI request
     operationId: deleteRTIRequest
-    description: Permanently deletes an RTI request by UUID. Returns 204 No Content on success. If the resource is linked with other resources (e.g., status history), it cannot be deleted.
+    description: Permanently deletes an RTI request by UUID. Returns 204 No Content
+      on success. If the resource is linked with other resources (e.g., status
+      history), it cannot be deleted.
     tags:
       - RTI Requests
     security:

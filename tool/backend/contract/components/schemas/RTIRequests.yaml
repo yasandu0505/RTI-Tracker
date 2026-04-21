@@ -1,9 +1,5 @@
 RTIRequestRequest:
   type: object
-  required:
-    - title
-    - senderId
-    - receiverId
   properties:
     title:
       type: string
@@ -11,7 +7,8 @@ RTIRequestRequest:
       description: Human-readable title for the RTI request.
     description:
       type: string
-      example: Requesting documents related to the 2024 healthcare budget regarding medical supplies.
+      example: Requesting documents related to the 2024 healthcare budget regarding
+        medical supplies.
       description: Detailed description of the RTI request.
     senderId:
       type: string
@@ -31,18 +28,10 @@ RTIRequestRequest:
 
 RTIRequestResponse:
   type: object
-  required:
-    - id
-    - title
-    - senderId
-    - receiverId
-    - createdAt
-    - updatedAt
   properties:
     id:
       type: string
       format: uuid
-      readOnly: true
       example: 3fa85f64-5717-4562-b3fc-2c963f66afa6
       description: Unique identifier of the RTI request.
     title:
@@ -51,7 +40,8 @@ RTIRequestResponse:
       description: Title of the RTI request.
     description:
       type: string
-      example: Requesting documents related to the 2024 healthcare budget regarding medical supplies.
+      example: Requesting documents related to the 2024 healthcare budget regarding
+        medical supplies.
       description: Description of the RTI request.
     senderId:
       type: string
@@ -71,18 +61,19 @@ RTIRequestResponse:
     createdAt:
       type: string
       format: date-time
-      readOnly: true
       example: "2026-03-31T09:00:00Z"
       description: ISO 8601 timestamp of when the request was created (UTC).
     updatedAt:
       type: string
       format: date-time
-      readOnly: true
       example: "2026-03-31T09:00:00Z"
       description: ISO 8601 timestamp of when the request was last updated (UTC).
 
 RTIRequestListResponse:
   type: object
+  required:
+    - data
+    - pagination
   properties:
     data:
       type: array
