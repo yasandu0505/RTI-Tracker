@@ -9,7 +9,7 @@ test.describe('Receivers Management', () => {
 
   test('can switch between tabs', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Receivers' })).toBeVisible();
-    
+
     // Switch to Institutions
     await page.getByRole('button', { name: 'Institutions' }).click();
     await expect(page.getByText('Institution List')).toBeVisible();
@@ -58,7 +58,7 @@ test.describe('Receivers Management', () => {
 
     // SHOULD REDIRECT BACK TO RECEIVER MODAL
     await expect(page.getByRole('heading', { name: 'New Receiver' })).toBeVisible();
-    
+
     // Verify Gringotts is selected (SearchableSelect shows the name in the input value)
     await expect(page.getByPlaceholder('Select institution')).toHaveValue('Gringotts Bank');
   });
@@ -67,10 +67,10 @@ test.describe('Receivers Management', () => {
     // Using the mock data 'Ministry of Finance'
     const searchInput = page.getByPlaceholder('Search receivers...');
     await searchInput.fill('Finance');
-    
+
     // Should show results
     await expect(page.getByText('pio.finance@gov.in')).toBeVisible();
-    
+
     // Search something that doesn't exist
     await searchInput.fill('NonExistentDepartment');
     await expect(page.getByText('No data found.')).toBeVisible({ timeout: 10000 });
@@ -87,6 +87,42 @@ test.describe('Receivers Management', () => {
     await dialog.getByRole('button', { name: 'Delete' }).click();
 
     await expect(page.getByText('Receiver deleted')).toBeVisible();
+  });
+
+  test('validates email and contact number requirements', async ({ page }) => {
+    await page.getByRole('button', { name: 'New Receiver' }).click();
+
+    // 1. Try to submit empty 
+    await page.getByRole('button', { name: 'Create Receiver' }).click();
+    await expect(page.getByText('Email or Contact No is required')).toBeVisible();
+    await expect(page.getByText('Institution is required')).toBeVisible();
+    await expect(page.getByText('Position is required')).toBeVisible();
+
+
+    // 2. Test invalid email format (missing dot)
+    const emailInput = page.getByPlaceholder('receiver@example.com');
+    await emailInput.fill('test@example');
+    await page.getByRole('button', { name: 'Create Receiver' }).click();
+    await expect(page.getByText('Please enter a valid email address')).toBeVisible();
+
+    // 3. Test invalid email format (missing @)
+    await emailInput.fill('testexample.com');
+    await page.getByRole('button', { name: 'Create Receiver' }).click();
+    await expect(page.getByText('Please enter a valid email address')).toBeVisible();
+
+    // 4. Test invalid Sri Lankan phone number
+    const phoneInput = page.getByPlaceholder('Phone number');
+    await phoneInput.fill('123456');
+    await page.getByRole('button', { name: 'Create Receiver' }).click();
+    await expect(page.getByText('Please enter a valid Sri Lankan phone number')).toBeVisible();
+
+    // 5. Test valid inputs
+    await emailInput.fill('test@example.com');
+    await phoneInput.fill('0771234567');
+
+    // Errors should ideally disappear or not be present
+    await expect(page.getByText('Please enter a valid email address')).not.toBeVisible();
+    await expect(page.getByText('Please enter a valid Sri Lankan phone number')).not.toBeVisible();
   });
 
 });
