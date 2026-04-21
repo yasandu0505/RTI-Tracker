@@ -8,7 +8,8 @@ from .exceptions import (
     NotFoundException,
     UnprocessableEntityException,
     InternalServerException,
-    api_exception_handler
+    api_exception_handler,
+    validation_exception_handler
 )
 
 __all__ = [
@@ -21,5 +22,6 @@ __all__ = [
     "NotFoundException",
     "UnprocessableEntityException",
     "InternalServerException",
-    "api_exception_handler"
+    "api_exception_handler",
+    "validation_exception_handler"
 ]
