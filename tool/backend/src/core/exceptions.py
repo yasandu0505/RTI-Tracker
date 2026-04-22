@@ -99,33 +99,22 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     for err in exc.errors():
         loc = err.get("loc", [])
         field = ".".join(str(x) for x in loc if x != "body")
-
-        error_type = err.get("type")
-        message = err.get("msg")
-
-        if error_type == "string_type":
-            message = "Must be a string"
-        elif error_type == "int_type":
-            message = "Must be a number"
-        elif error_type == "value_error.email":
-            message = "Must be a valid email address"
-        elif error_type == "missing":
-            message = "This field is required"
+        message = err.get("msg", "Invalid request payload")
 
         details.append({
-            "field": field,
+            "field": field or "invalid_input_field",
             "message": message
         })
 
     response = ErrorResponse(       
-        status=422,
+        status=status.HTTP_422_UNPROCESSABLE_CONTENT,
         error="Validation Error",
         message="Invalid request payload",
         details=details,
     )
 
     return JSONResponse(
-        status_code=422,
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         content=response.model_dump(mode="json")
     )
     
