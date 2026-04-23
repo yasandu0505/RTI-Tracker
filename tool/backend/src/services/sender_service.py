@@ -216,5 +216,36 @@ class SenderService:
             raise InternalServerException(
                 "[SENDER SERVICE] Failed to update sender"
             ) from e
+    
+    # delete sender
+    def delete_sender(self, *, sender_id: UUID) -> None:
+        try:
+            # fetch the record from the table
+            statement = select(Sender).where(Sender.id == sender_id)
+            result = self.session.exec(statement).first()
+
+            if result is None:
+                raise NotFoundException("Sender not found")
+
+            # delete the record
+            self.session.delete(result)
+            self.session.commit()
+
+            return None
+        except IntegrityError as e:
+            self.session.rollback()
+            # detect unique constraint
+            raise ConflictException(
+                "Cannot delete sender: they still have associated RTI requests. "
+                "Please delete or reassign those requests first."
+            ) from e
+        except NotFoundException:
+            raise
+        except Exception as e:
+            self.session.rollback()
+            logger.error(f"[SENDER SERVICE] Error deleting sender: {e}")
+            raise InternalServerException(
+                "[SENDER SERVICE] Failed to delete sender"
+            ) from e    
         
 
