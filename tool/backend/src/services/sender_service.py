@@ -1,6 +1,6 @@
-from sqlmodel import Session
-from src.models import SenderRequest, SenderResponse, Sender
-from src.core.exceptions import InternalServerException, ConflictException
+from sqlmodel import Session, select, func
+from src.models import SenderRequest, SenderResponse, Sender, SenderListResponse, PaginationModel
+from src.core.exceptions import InternalServerException, ConflictException, BadRequestException
 from uuid import uuid4
 import logging
 from sqlalchemy.exc import IntegrityError
@@ -55,4 +55,50 @@ class SenderService:
             logger.error(f"[SENDER SERVICE] Error creating sender: {e}")
             raise InternalServerException(
                 "[SENDER SERVICE] Failed to create sender"
+            ) from e
+    
+    # get sender list
+    def get_sender_list(self, *, page: int = 1, page_size: int = 10) -> SenderListResponse:
+        try:
+            # validate the page and page size
+            if page <= 0 or page_size <= 0:
+                raise BadRequestException("Page and page size must be positive integers")
+            
+            if page_size > 100:
+                raise BadRequestException("Page size cannot be greater than 100")
+            
+            # calculate the offset
+            offset = (page - 1) * page_size
+
+            # fetch the records from the table
+            statement_records = select(Sender)\
+                .order_by(Sender.created_at.desc())\
+                .offset(offset)\
+                .limit(page_size)
+            results = self.session.exec(statement_records).all()
+            
+            # fetch the total record count
+            statement_count = select(func.count()).select_from(Sender)
+            total_items = self.session.exec(statement_count).one()
+
+            # pagination response
+            pagination = PaginationModel(
+                page=page,
+                pageSize=page_size,
+                totalItem=total_items,
+                totalPages=(total_items + page_size - 1) // page_size if total_items > 0 else 0
+            )
+            
+            # return the final response
+            return SenderListResponse(
+                data=[SenderResponse.model_validate(r) for r in results],
+                pagination=pagination
+            )
+        except BadRequestException:
+            raise
+        except Exception as e:
+            self.session.rollback()
+            logger.error(f"[SENDER SERVICE] Error getting senders: {e}")
+            raise InternalServerException(
+                "[SENDER SERVICE] Failed to get senders"
             ) from e
