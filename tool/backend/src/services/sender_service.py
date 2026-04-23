@@ -1,5 +1,5 @@
 from sqlmodel import Session, select, func
-from src.models import SenderRequest, SenderResponse, Sender, SenderListResponse, PaginationModel
+from src.models import SenderRequest, SenderResponse, Sender, SenderListResponse, PaginationModel, SenderUpdateRequest
 from src.core.exceptions import InternalServerException, ConflictException, BadRequestException, NotFoundException
 from uuid import uuid4
 import logging
@@ -122,6 +122,99 @@ class SenderService:
             logger.error(f"[SENDER SERVICE] Error getting sender: {e}")
             raise InternalServerException(
                 "[SENDER SERVICE] Failed to get sender"
+            ) from e
+
+    # update sender [PATCH]
+    def update_sender_patch(self, *, sender_id: UUID, sender_request: SenderUpdateRequest) -> SenderResponse:
+        try:
+            # fetch the record from the table
+            statement = select(Sender).where(Sender.id == sender_id)
+            result = self.session.exec(statement).first()
+
+            if result is None:
+                raise NotFoundException("Sender not found")
+
+            # update(PATCH) the record
+            if sender_request.name is not None:
+                result.name = sender_request.name
+
+            if sender_request.email is not None:
+                result.email = sender_request.email
+
+            if sender_request.address is not None:
+                result.address = sender_request.address
+
+            if sender_request.contact_no is not None:
+                result.contact_no = sender_request.contact_no
+
+            self.session.add(result)
+            self.session.commit()
+            self.session.refresh(result)
+
+            return SenderResponse.model_validate(result)
+        except IntegrityError as e:
+            self.session.rollback()
+            # detect unique constraint
+            constraint = e.orig.diag.constraint_name
+
+            if constraint == "senders_email_key":
+                raise ConflictException("Email already exists")
+
+            elif constraint == "senders_contact_no_key":
+                raise ConflictException("Contact number already exists")
+
+            else:
+                raise ConflictException("Duplicate values violates unique constraint")
+        except NotFoundException:
+            raise
+        except Exception as e:
+            self.session.rollback()
+            logger.error(f"[SENDER SERVICE] Error updating sender: {e}")
+            raise InternalServerException(
+                "[SENDER SERVICE] Failed to update sender"
+            ) from e
+    
+    # update sender [PUT]
+    def update_sender_put(self, *, sender_id: UUID, sender_request: SenderRequest) -> SenderResponse:
+        try:
+            # fetch the record from the table
+            statement = select(Sender).where(Sender.id == sender_id)
+            result = self.session.exec(statement).first()
+
+            if result is None:
+                raise NotFoundException("Sender not found")
+
+            # update(PUT) the record
+            result.name = sender_request.name
+            result.email = sender_request.email
+            result.address = sender_request.address
+            result.contact_no = sender_request.contact_no
+
+            self.session.add(result)
+            self.session.commit()
+            self.session.refresh(result)
+
+            return SenderResponse.model_validate(result)
+        except IntegrityError as e:
+            self.session.rollback()
+            # detect unique constraint
+            constraint = e.orig.diag.constraint_name
+
+            if constraint == "senders_email_key":
+                raise ConflictException("Email already exists")
+
+            elif constraint == "senders_contact_no_key":
+                raise ConflictException("Contact number already exists")
+
+            else:
+                raise ConflictException("Duplicate values violates unique constraint")
+        except NotFoundException:
+            raise
+        except Exception as e:
+            self.session.rollback()
+            logger.error(f"[SENDER SERVICE] Error updating sender: {e}")
+            raise InternalServerException(
+                "[SENDER SERVICE] Failed to update sender"
             ) from e
         
 
