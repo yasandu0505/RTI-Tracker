@@ -60,12 +60,12 @@ class SenderService:
     # get sender list
     def get_sender_list(self, *, page: int = 1, page_size: int = 10) -> SenderListResponse:
         try:
-            # validate the page and page size
-            if page <= 0 or page_size <= 0:
-                raise BadRequestException("Page and page size must be positive integers")
+            # # validate the page and page size
+            # if page <= 0 or page_size <= 0:
+            #     raise BadRequestException("Page and page size must be positive integers")
             
-            if page_size > 100:
-                raise BadRequestException("Page size cannot be greater than 100")
+            # if page_size > 100:
+            #     raise BadRequestException("Page size cannot be greater than 100")
             
             # calculate the offset
             offset = (page - 1) * page_size
@@ -94,8 +94,8 @@ class SenderService:
                 data=[SenderResponse.model_validate(r) for r in results],
                 pagination=pagination
             )
-        except BadRequestException:
-            raise
+        # except BadRequestException:
+        #     raise
         except Exception as e:
             self.session.rollback()
             logger.error(f"[SENDER SERVICE] Error getting senders: {e}")
