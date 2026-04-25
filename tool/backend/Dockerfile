@@ -28,6 +28,7 @@ USER 10014
 #    --no-editable installs your project as a real package (not a src link),
 #    so no second sync is needed after copying code
 COPY --chown=10014:10014 pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project
 COPY --chown=10014:10014 . .
 RUN uv sync --frozen --no-dev --no-editable
 
