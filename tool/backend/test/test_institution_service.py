@@ -1,8 +1,10 @@
 # tests/test_institution_service.py
+from pydantic import ValidationError
 import pytest
 from sqlalchemy.exc import OperationalError
 from src.services.institution_service import InstitutionService
 from src.models.response_models import InstitutionListResponse
+from src.models.request_models import InstitutionRequest
 from src.core.exceptions import InternalServerException, ConflictException
 from sqlmodel import SQLModel, Session, create_engine
 
@@ -109,4 +111,15 @@ def test_create_institutions_conflict_error(institution_db, make_institution_req
         service.create_institutions(request=request_2)
 
     assert "Duplicate values violates unique constraint" in str(excinfo.value)
+
+def test_create_institutions_with_empty_name(institution_db):
+    """Test raise Validation Error when pass an empty name"""
+
+    service = InstitutionService(session=institution_db)
+
+    with pytest.raises(ValidationError) as excinfo:
+        request = InstitutionRequest(name="")
+        service.create_institutions(request=request)
+
+    assert "String should have at least 1 character" in str(excinfo.value)
 
