@@ -37,7 +37,7 @@
                 updatedAt: "2026-03-31T09:00:00Z"
               email: contact@institution.com
               address: "No:15/A, Colombo 12"
-              contact_no: "0781231231"
+              contactNo: "0781231231"
               createdAt: "2026-03-31T09:00:00Z"
               updatedAt: "2026-03-31T09:00:00Z"
       "400":
@@ -83,7 +83,7 @@
                     updatedAt: "2026-03-31T09:00:00Z"
                   email: contact@institution.com
                   address: "No:15/A, Colombo 12"
-                  contact_no: "0781231231"
+                  contactNo: "0781231231"
                   createdAt: "2026-03-31T09:00:00Z"
                   updatedAt: "2026-03-31T09:00:00Z"
               pagination:
@@ -129,7 +129,7 @@
                 updatedAt: "2026-03-31T09:00:00Z"
               email: contact@institution.com
               address: "No:15/A, Colombo 12"
-              contact_no: "0781231231"
+              contactNo: "0781231231"
               createdAt: "2026-03-31T09:00:00Z"
               updatedAt: "2026-03-31T09:00:00Z"
       "401":
@@ -178,7 +178,7 @@
                 updatedAt: "2026-03-31T09:00:00Z"
               email: contact@institution.com
               address: "No:15/A, Colombo 12"
-              contact_no: "0781231231"
+              contactNo: "0781231231"
               createdAt: "2026-03-31T09:00:00Z"
               updatedAt: "2026-03-31T09:00:00Z"
       "400":
