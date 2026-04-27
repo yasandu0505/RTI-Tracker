@@ -54,21 +54,18 @@ ReceiverResponse:
     institution:
       $ref: "institutions.yaml#/InstitutionResponse"
     email:
-      type: string
-      nullable: true
+      type: [ "string", "null" ]
       format: email
       readOnly: true
       example: contact@institution.com
       description: Official email address of the receiver
     address:
-      type: string
-      nullable: true
+      type: [ "string", "null" ]
       readOnly: true
       example: No:15/A, Colombo 12
       description: Human readable physical address of the receiver
     contactNo:
-      type: string
-      nullable: true
+      type: [ "string", "null" ]
       readOnly: true
       example: "0781231231"
       description: Mobile contact number of the receiver
