@@ -1,7 +1,7 @@
 # tests/test_institution_service.py
 import pytest
 from pydantic import ValidationError
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import OperationalError, IntegrityError
 from src.services.institution_service import InstitutionService
 from src.models.response_models import InstitutionListResponse
 from src.models.request_models import InstitutionRequest
@@ -73,7 +73,7 @@ def test_create_institutions_success(institution_db, make_institution_request):
 
     request = make_institution_request(name="Test Institution")
 
-    result = service.create_institutions(request=request)
+    result = service.create_institution(request=request)
 
     assert result.name == "Test Institution"
 
@@ -90,7 +90,7 @@ def test_create_institutions_internal_server_error(monkeypatch, institution_db, 
     monkeypatch.setattr(institution_db, "commit", mock_commit)
 
     with pytest.raises(InternalServerException) as excinfo:
-        service.create_institutions(request=request)
+        service.create_institution(request=request)
 
     assert "Failed to create Institution" in str(excinfo.value)    
 
@@ -103,15 +103,15 @@ def test_create_institutions_conflict_error(institution_db, make_institution_req
     request_2 = make_institution_request(name="Test Institution")
 
     # first service call
-    result_1 = service.create_institutions(request=request_1)
+    result_1 = service.create_institution(request=request_1)
 
     assert result_1.name == "Test Institution"
 
     # second service call with the same institution name
     with pytest.raises(ConflictException) as excinfo:
-        service.create_institutions(request=request_2)
+        service.create_institution(request=request_2)
 
-    assert "Duplicate values violates unique constraint" in str(excinfo.value)
+    assert "Institution with this name already exists." in str(excinfo.value)
 
 def test_create_institutions_with_empty_name(institution_db):
     """Test raise Validation Error when pass an empty name"""
@@ -120,7 +120,7 @@ def test_create_institutions_with_empty_name(institution_db):
 
     with pytest.raises(ValidationError) as excinfo:
         request = InstitutionRequest(name="")
-        service.create_institutions(request=request)
+        service.create_institution(request=request)
 
     assert "String should have at least 1 character" in str(excinfo.value)
 
@@ -131,10 +131,10 @@ def test_get_institution_by_id_success(institution_db, make_institution_request)
     request = make_institution_request(name="Test Institution")
 
     # create institution
-    create_result = service.create_institutions(request=request)
+    create_result = service.create_institution(request=request)
 
     # get institution
-    read_result = service.get_institution_by_id(institution_id=create_result.id)
+    read_result = service.get_institution(institution_id=create_result.id)
 
     assert read_result.name == create_result.name
     assert read_result.id == create_result.id
@@ -147,7 +147,7 @@ def test_get_institution_invalid_id(institution_db):
     service = InstitutionService(session=institution_db)
 
     with pytest.raises(BadRequestException) as exeinfo:
-        service.get_institution_by_id(institution_id="")
+        service.get_institution(institution_id="")
     
     assert "Invalid UUID format" in str(exeinfo.value)
 
@@ -157,7 +157,7 @@ def test_get_institution_not_found(institution_db):
     random_id = str(uuid4())
 
     with pytest.raises(NotFoundException) as excinfo:
-        service.get_institution_by_id(institution_id=random_id)
+        service.get_institution(institution_id=random_id)
         
     assert f"Institution with id {random_id} not found." in str(excinfo.value)
 
@@ -173,7 +173,7 @@ def test_get_institution_internal_server_error(monkeypatch, institution_db):
     random_id = str(uuid4())
     
     with pytest.raises(InternalServerException) as excinfo:
-        service.get_institution_by_id(institution_id=random_id)
+        service.get_institution(institution_id=random_id)
         
     assert "Failed to read Insitution" in str(excinfo.value)
 
@@ -184,7 +184,7 @@ def test_update_institution_success(institution_db, make_institution_request):
     
     # Create an institution first
     create_request = make_institution_request(name="Old Name")
-    created_institution = service.create_institutions(request=create_request)
+    created_institution = service.create_institution(request=create_request)
     
     # Update the institution
     update_request = make_institution_request(name="New Name")
@@ -223,10 +223,10 @@ def test_update_institution_conflict_error(institution_db, make_institution_requ
     
     # Create two institutions
     req1 = make_institution_request(name="Institution A")
-    service.create_institutions(request=req1)
+    service.create_institution(request=req1)
     
     req2 = make_institution_request(name="Institution B")
-    inst2 = service.create_institutions(request=req2)
+    inst2 = service.create_institution(request=req2)
     
     # Try to update inst2's name to "Institution A"
     update_request = make_institution_request(name="Institution A")
@@ -242,7 +242,7 @@ def test_update_institution_internal_server_error(monkeypatch, institution_db, m
     
     # Create an institution first
     create_request = make_institution_request(name="Old Name")
-    created_institution = service.create_institutions(request=create_request)
+    created_institution = service.create_institution(request=create_request)
     
     update_request = make_institution_request(name="New Name")
     
@@ -256,3 +256,77 @@ def test_update_institution_internal_server_error(monkeypatch, institution_db, m
         service.update_institution(institution_id=created_institution.id, request=update_request)
         
     assert "Failed to update Institution" in str(excinfo.value)
+
+# delete institution test
+def test_delete_institution_success(institution_db, make_institution_request):
+    """Test delete institution success"""
+    service = InstitutionService(session=institution_db)
+    
+    # Create an institution first
+    create_request = make_institution_request(name="To Be Deleted")
+    created_institution = service.create_institution(request=create_request)
+    
+    # Delete the institution
+    result = service.delete_institution(institution_id=created_institution.id)
+    assert result is None
+    
+    # Verify it's gone
+    with pytest.raises(NotFoundException):
+        service.get_institution(institution_id=created_institution.id)
+
+def test_delete_institution_invalid_id(institution_db):
+    """Test delete institution with invalid id"""
+    service = InstitutionService(session=institution_db)
+    
+    with pytest.raises(BadRequestException) as excinfo:
+        service.delete_institution(institution_id="invalid-uuid")
+        
+    assert "Invalid UUID format" in str(excinfo.value)
+
+def test_delete_institution_not_found(institution_db):
+    """Test delete institution not found"""
+    service = InstitutionService(session=institution_db)
+    random_id = str(uuid4())
+    
+    with pytest.raises(NotFoundException) as excinfo:
+        service.delete_institution(institution_id=random_id)
+        
+    assert f"Institution with id {random_id} not found." in str(excinfo.value)
+
+def test_delete_institution_conflict_error(monkeypatch, institution_db, make_institution_request):
+    """Test delete institution conflict error (IntegrityError)"""
+    service = InstitutionService(session=institution_db)
+    
+    # Create an institution first
+    create_request = make_institution_request(name="To Be Deleted")
+    created_institution = service.create_institution(request=create_request)
+    
+    # Mock delete to raise IntegrityError (simulating foreign key constraint violation)
+    def mock_delete(*args, **kwargs):
+        raise IntegrityError("Fake Integrity error", None, None)
+        
+    monkeypatch.setattr(institution_db, "delete", mock_delete)
+    
+    with pytest.raises(ConflictException) as excinfo:
+        service.delete_institution(institution_id=created_institution.id)
+        
+    assert "Cannot delete Institution because it is used in existing records." in str(excinfo.value)
+
+def test_delete_institution_internal_server_error(monkeypatch, institution_db, make_institution_request):
+    """Test delete institution raises internal server error"""
+    service = InstitutionService(session=institution_db)
+    
+    # Create an institution first
+    create_request = make_institution_request(name="To Be Deleted")
+    created_institution = service.create_institution(request=create_request)
+    
+    # Mock commit to raise OperationalError
+    def mock_commit(*args, **kwargs):
+        raise OperationalError("Fake DB error", None, None)
+        
+    monkeypatch.setattr(institution_db, "commit", mock_commit)
+    
+    with pytest.raises(InternalServerException) as excinfo:
+        service.delete_institution(institution_id=created_institution.id)
+        
+    assert "Failed to delete Institution" in str(excinfo.value)

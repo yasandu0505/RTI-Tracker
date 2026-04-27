@@ -1,8 +1,7 @@
-from uuid import uuid4, UUID
 import logging
+from uuid import uuid4, UUID
 from src.models import PaginationModel, Institution
 from src.models.response_models import InstitutionListResponse, InstitutionResponse
-from src.models.table_schemas import Institution
 from src.core.exceptions import InternalServerException, ConflictException, NotFoundException, BadRequestException
 from sqlmodel import Session, select, func
 from sqlalchemy.exc import IntegrityError
@@ -53,7 +52,7 @@ class InstitutionService:
             raise InternalServerException("Failed to fetch Institutions from database.") from e
     
     # API
-    def get_institution_by_id(
+    def get_institution(
         self,
         *,
         institution_id
@@ -78,11 +77,11 @@ class InstitutionService:
             raise InternalServerException(f"Failed to read Insitution: {e}") from e
     
     # API
-    def create_institutions(
+    def create_institution(
         self,
         *,
         request
-    ):
+    ) -> InstitutionResponse:
         try:
             unique_id = uuid4()
 
@@ -102,7 +101,7 @@ class InstitutionService:
         except IntegrityError as e:
             self.session.rollback()
             logger.error(f"[INSTITUTION SERVICE] Error creating institution: {e}")
-            raise ConflictException("Duplicate values violates unique constraint") from e
+            raise ConflictException("Institution with this name already exists.") from e
 
         except Exception as e:
             self.session.rollback()
@@ -115,7 +114,7 @@ class InstitutionService:
         *,
         institution_id,
         request
-    ):
+    ) -> InstitutionResponse:
         try:
             target_id = UUID(institution_id) if isinstance(institution_id, str) else institution_id
         except ValueError:
@@ -145,3 +144,37 @@ class InstitutionService:
             logger.error(f"[INSTITUTION SERVICE] Error updating Institution: {e}")
             raise InternalServerException(f"Failed to update Institution: {e}") from e
 
+    # API
+    def delete_institution(
+        self,
+        *,
+        institution_id
+    ) -> None:
+        try:
+            target_id = UUID(institution_id) if isinstance(institution_id, str) else institution_id
+        except ValueError:
+            raise BadRequestException(f"Invalid UUID format: {institution_id}")
+
+        institution = self.session.get(Institution, target_id)
+
+        if not institution:
+            raise NotFoundException(f"Institution with id {institution_id} not found.")
+        
+        try:
+            # Delete record from DB
+            self.session.delete(institution)
+            self.session.commit()
+            return None
+
+        except IntegrityError:
+            self.session.rollback()
+            raise ConflictException("Cannot delete Institution because it is used in existing records.")
+
+        except (BadRequestException, NotFoundException, ConflictException):
+            raise
+        except Exception as e:
+            self.session.rollback()
+            logger.error(f"[INSTITUTION SERVICE] Error deleting Institution: {e}")
+            raise InternalServerException(f"Failed to delete Institution: {e}") from e
+        
+        

@@ -6,7 +6,7 @@ from src.repositories.db import SessionDep
 from src.models.response_models import InstitutionListResponse, InstitutionResponse
 from src.dependencies import RoleChecker
 from src.models import UserRole, User
-from fastapi import Depends, Query
+from fastapi import Depends, Query, status
 from fastapi.routing import APIRouter
 
 router = APIRouter(prefix="/api/v1", tags=["Institutions"])
@@ -24,30 +24,40 @@ def get_institutions_endpoint(
     response = service.get_institutions(page=page, page_size=page_size)
     return response
 
-@router.get("/institutions/{id}", response_model=InstitutionResponse)
-def get_institution_by_id_endpoint(
-    id: Annotated[str, Path(title="ID of the institution")],
+@router.get("/institutions/{institution_id}", response_model=InstitutionResponse)
+def get_institution_endpoint(
+    institution_id: Annotated[str, Path(title="ID of the institution")],
     service: InstitutionService = Depends(get_institution_service),
     user: User = Depends(RoleChecker([UserRole.ADMIN, UserRole.USER]))
 ):
-    response = service.get_institution_by_id(institution_id=id)
+    response = service.get_institution(institution_id=institution_id)
     return response
 
 @router.post("/institutions", response_model=InstitutionResponse)
-def create_institutions_endpoint(
+def create_institution_endpoint(
     request: InstitutionRequest,
     service: InstitutionService = Depends(get_institution_service),
     user: User = Depends(RoleChecker([UserRole.ADMIN, UserRole.USER]))
 ):  
-    response = service.create_institutions(request=request)
+    response = service.create_institution(request=request)
     return response
 
-@router.put("/rti_templates/{id}")
-async def update_rti_template_endpoint(
-    id: Annotated[str, Path(title="ID of the institution")],
+@router.put("/institutions/{institution_id}", response_model=InstitutionResponse)
+def update_institution_endpoint(
+    institution_id: Annotated[str, Path(title="ID of the institution")],
     request: InstitutionRequest,
     service: InstitutionService = Depends(get_institution_service),
     user: User = Depends(RoleChecker([UserRole.ADMIN, UserRole.USER]))
 ):
-    response = service.update_institution(institution_id=id,request=request)
+    response = service.update_institution(institution_id=institution_id,request=request)
     return response
+
+@router.delete("/institutions/{institution_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_institution_endpoint(
+    institution_id: Annotated[str, Path(title="ID of the institution")],
+    service: InstitutionService = Depends(get_institution_service),
+    user: User = Depends(RoleChecker([UserRole.ADMIN, UserRole.USER]))
+):
+    service.delete_institution(institution_id=institution_id)
+    return None
+
