@@ -2,7 +2,7 @@ import logging
 from src.models import PaginationModel
 from src.models.response_models import PositionListResponse, PositionResponse
 from src.models.table_schemas import Position
-from src.core.exceptions import InternalServerException, NotFoundException
+from src.core.exceptions import InternalServerException, NotFoundException, IntegrityError, ConflictException
 from sqlmodel import Session, select, func
 from uuid import UUID
 
@@ -71,3 +71,33 @@ class PositionService:
             raise InternalServerException(
                 "[POSITION SERVICE] Failed to get position"
             ) from e
+
+    # delete position
+    def delete_position(self, *, position_id: UUID) -> None:
+        try:
+            # fetch the record from the table
+            statement = select(Position).where(Position.id == position_id)
+            result = self.session.exec(statement).first()
+
+            if result is None:
+                raise NotFoundException("Position not found")
+
+            # delete the record
+            self.session.delete(result)
+            self.session.commit()
+
+            return None
+        except IntegrityError as e:
+            self.session.rollback()
+            # detect foreign key constraint violation
+            raise ConflictException(
+                "Cannot delete position"
+            ) from e
+        except NotFoundException:
+            raise
+        except Exception as e:
+            self.session.rollback()
+            logger.error(f"[POSITION SERVICE] Error deleting position: {e}")
+            raise InternalServerException(
+                "[POSITION SERVICE] Failed to delete position"
+            ) from e  
