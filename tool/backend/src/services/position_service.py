@@ -67,7 +67,7 @@ class PositionService:
             raise
         except Exception as e:
             self.session.rollback()
-            logger.error(f"[SENDER SERVICE] Error getting sender: {e}")
+            logger.error(f"[POSITION SERVICE] Error getting position: {e}")
             raise InternalServerException(
-                "[SENDER SERVICE] Failed to get sender"
+                "[POSITION SERVICE] Failed to get position"
             ) from e
