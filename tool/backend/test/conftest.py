@@ -159,8 +159,8 @@ def make_file_service():
 
         file_service.delete_file = AsyncMock(return_value=delete_return)
         
-        # mock get_file
-        file_service.get_file = AsyncMock(return_value={
+        # mock read_file
+        file_service.read_file = AsyncMock(return_value={
             "content": b"# Old Content",
             "sha": "old-sha"
         })

@@ -99,6 +99,10 @@ class RTITemplateService:
             
             content = await template_request.file.read()
             _, ext = os.path.splitext(template_request.file.filename)
+
+            if not ext:
+                raise BadRequestException(f"{template_request.file.filename} doesn't have any file extension")
+                
             file_path = f"rti-templates/{unique_id}{ext}"
 
             response = await self.file_service.create_file(
@@ -169,11 +173,12 @@ class RTITemplateService:
                     raise BadRequestException(f'{template_request.file.content_type} is not allowed')
                 
                 content = await template_request.file.read()
-                _, ext = os.path.splitext(template_request.file.filename)
-                file_path = f"rti-templates/{rti_template.id}{ext}"
+                
+                # Use the existing path from the DB to ensure we update the correct file
+                file_path = rti_template.file
 
                 # fetch old content for compensating transaction
-                old_file_data = await self.file_service.get_file(file_path)
+                old_file_data = await self.file_service.read_file(file_path)
 
                 response = await self.file_service.update_file(
                     file_path=file_path, 
@@ -208,7 +213,7 @@ class RTITemplateService:
 
             # rollback the file update if it was successful but DB commit failed
             if old_file_data:
-                current_file_data = await self.file_service.get_file(file_path)
+                current_file_data = await self.file_service.read_file(file_path)
                 try:
                     await self.file_service.update_file(
                         file_path=file_path,
@@ -249,7 +254,7 @@ class RTITemplateService:
        
         try:
             if file_path:
-                old_file_data = await self.file_service.get_file(file_path)
+                old_file_data = await self.file_service.read_file(file_path)
 
             # Delete file from GitHub
             if file_path:

@@ -237,10 +237,10 @@ def test_get_github_file_path_builds_correct_url():
     )
     assert url == "https://github.com/org/repo/blob/main/rti-templates/abc.md"
 
-# get_file tests
+# read_file tests
 @pytest.mark.asyncio
 async def test_get_file_success(make_github_content_file):
-    """get_file returns decoded content and SHA from the GitHub API."""
+    """read_file returns decoded content and SHA from the GitHub API."""
     file_path = f"rti-templates/test-file.md"
     expected_content = b"# Content"
     expected_sha = "sha123"
@@ -251,7 +251,7 @@ async def test_get_file_success(make_github_content_file):
 
     service = _make_service(get_contents_return=contents)
 
-    result = await service.get_file(file_path=file_path)
+    result = await service.read_file(file_path=file_path)
 
     assert result["content"] == expected_content
     assert result["sha"] == expected_sha
@@ -259,9 +259,9 @@ async def test_get_file_success(make_github_content_file):
 
 @pytest.mark.asyncio
 async def test_get_file_raises_internal_exception_on_github_error():
-    """get_file wraps GitHub API errors in InternalServerException."""
+    """read_file wraps GitHub API errors in InternalServerException."""
     service = _make_service(get_contents_side_effect=GithubException(404, "Not Found"))
 
     with pytest.raises(InternalServerException):
-        await service.get_file(file_path="rti-templates/test.md")
+        await service.read_file(file_path="rti-templates/test.md")
 

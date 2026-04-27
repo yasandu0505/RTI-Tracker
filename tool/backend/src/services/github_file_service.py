@@ -117,7 +117,7 @@ class GithubFileService:
             return False
 
     # get file
-    async def get_file(self, file_path: str) -> Dict:
+    async def read_file(self, file_path: str) -> Dict:
         """Fetches the content and SHA of a file from GitHub."""
         try:
             contents = self.repository.get_contents(file_path, ref=self.branch)
@@ -130,6 +130,4 @@ class GithubFileService:
         except GithubException as e:
             logger.error(f"[FILE SERVICE] Error fetching file from github: {e}")
             raise InternalServerException("[FILE SERVICE] Failed to fetch file from github") from e
-
-
 

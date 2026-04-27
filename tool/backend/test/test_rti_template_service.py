@@ -211,18 +211,33 @@ async def test_create_rti_template_rolls_back_session_on_failure(rti_template_db
     rollback_mock.assert_called_once()
     
 @pytest.mark.asyncio
-async def test_create_rti_template_duplicate_title(rti_template_db, monkeypatch, make_file_service, make_template_request):
-    """IntegrityError (duplicate title) during create raises ConflictException."""
+async def test_create_rti_template_duplicate_title(rti_template_db, make_file_service, make_template_request):
+    """Real DB unique-constraint collision on create raises ConflictException."""
+    # Get an existing template's title
+    existing_template = rti_template_db.exec(select(RTITemplate)).first()
+    duplicate_title = existing_template.title
+
     fs = make_file_service()
     service = RTITemplateService(session=rti_template_db, file_service=fs)
     
-    monkeypatch.setattr(rti_template_db, "commit", MagicMock(side_effect=IntegrityError("Conflict", None, None)))
-    
     with pytest.raises(ConflictException) as exc:
-        await service.create_rti_template(template_request=make_template_request(title="Duplicate Title"))
+        await service.create_rti_template(template_request=make_template_request(title=duplicate_title))
     
     assert "already exists" in str(exc.value)
     fs.delete_file.assert_called_once()
+
+@pytest.mark.asyncio
+async def test_create_rti_template_no_extension(rti_template_db, make_file_service, make_template_request):
+    """BadRequestException is raised if the uploaded file has no extension."""
+    service = RTITemplateService(session=rti_template_db, file_service=make_file_service())
+    
+    request = make_template_request()
+    request.file.filename = "no_extension_file"
+    
+    with pytest.raises(BadRequestException) as exc:
+        await service.create_rti_template(template_request=request)
+    
+    assert "doesn't have any file extension" in str(exc.value)
 
 # update_rti_template tests
 @pytest.mark.asyncio
@@ -323,8 +338,8 @@ async def test_update_rti_template_rolls_back_file_on_db_failure(rti_template_db
     new_sha = "new-sha"
     
     fs = make_file_service()
-    # Mock get_file to return different SHAs on successive calls
-    fs.get_file = AsyncMock(side_effect=[
+    # Mock read_file to return different SHAs on successive calls
+    fs.read_file = AsyncMock(side_effect=[
         {"content": old_content, "sha": old_sha}, # first call (old)
         {"content": b"# New Content", "sha": new_sha} # second call (new)
     ])
@@ -341,46 +356,44 @@ async def test_update_rti_template_rolls_back_file_on_db_failure(rti_template_db
     
     # Verify update_file was called with the OLD content and the NEW sha to restore it
     fs.update_file.assert_called_with(
-        file_path=f"rti-templates/{existing_template.id}.md",
+        file_path=existing_template.file,
         content=old_content,
         sha=new_sha,
-        message=f"Rollback: restore previous version of rti-templates/{existing_template.id}.md"
+        message=f"Rollback: restore previous version of {existing_template.file}"
     )
 
 @pytest.mark.asyncio
-async def test_update_rti_template_duplicate_title(rti_template_db, monkeypatch, make_file_service, make_template_request):
-    """IntegrityError (duplicate title) during update triggers rollback, restores file, and raises ConflictException."""
-    existing_template = rti_template_db.exec(select(RTITemplate)).first()
-    template_id = str(existing_template.id)
-    
+async def test_update_rti_template_duplicate_title(rti_template_db, make_file_service, make_template_request):
+    """Real DB unique-constraint collision on update raises ConflictException."""
+    templates = rti_template_db.exec(select(RTITemplate)).all()
+    target_template = templates[0]          # The template we will try to update
+    duplicate_title = templates[1].title    # A title that already belongs to another template
+
     old_content = b"# Old Content"
     old_sha = "old-sha"
     new_sha = "new-sha"
     
     fs = make_file_service()
-    fs.get_file = AsyncMock(side_effect=[
+    fs.read_file = AsyncMock(side_effect=[
         {"content": old_content, "sha": old_sha}, # first call (old)
         {"content": b"# New Content", "sha": new_sha} # second call (new)
     ])
     
     service = RTITemplateService(session=rti_template_db, file_service=fs)
-    
-    # Mock commit to raise IntegrityError
-    monkeypatch.setattr(rti_template_db, "commit", MagicMock(side_effect=IntegrityError("Conflict", None, None)))
-    
-    request = make_template_request(id=template_id, title="Duplicate Title")
+
+    request = make_template_request(id=str(target_template.id), title=duplicate_title)
     
     with pytest.raises(ConflictException) as exc:
         await service.update_rti_template(template_request=request)
     
     assert "already exists" in str(exc.value)
     
-    # Verify update_file was called with the OLD content and the NEW sha to restore it
+    # Verify compensating transaction (rollback)
     fs.update_file.assert_called_with(
-        file_path=f"rti-templates/{existing_template.id}.md",
+        file_path=target_template.file,
         content=old_content,
         sha=new_sha,
-        message=f"Rollback: restore previous version of rti-templates/{existing_template.id}.md"
+        message=f"Rollback: restore previous version of {target_template.file}"
     )
 
 # delete_rti_template tests
@@ -426,7 +439,7 @@ async def test_delete_rti_template_integrity_error(rti_template_db, make_file_se
     template_id = existing_template.id
     
     fs = make_file_service()
-    fs.get_file = AsyncMock(return_value={"content": b"Content", "sha": "sha"})
+    fs.read_file = AsyncMock(return_value={"content": b"Content", "sha": "sha"})
     fs.create_file = AsyncMock(return_value=True)
     
     service = RTITemplateService(session=rti_template_db, file_service=fs)
@@ -451,7 +464,7 @@ async def test_delete_rti_template_generic_exception(rti_template_db, make_file_
     template_id = existing_template.id
     
     fs = make_file_service()
-    fs.get_file = AsyncMock(return_value={"content": b"Content", "sha": "sha"})
+    fs.read_file = AsyncMock(return_value={"content": b"Content", "sha": "sha"})
     fs.create_file = AsyncMock(return_value=True)
     
     service = RTITemplateService(session=rti_template_db, file_service=fs)
