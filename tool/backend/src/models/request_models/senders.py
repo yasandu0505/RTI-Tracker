@@ -30,4 +30,4 @@ class SenderUpdateRequest(BaseModel):
     name: Optional[str] = None
     email: Optional[EmailStr] = None
     address: Optional[str] = None
-    contact_no: Optional[str] = Field(None, pattern=r"^\+?\d{10,15}$")
+    contact_no: Optional[str] = Field(None, pattern=r"^(?:\+94|0)\d{9}$")
