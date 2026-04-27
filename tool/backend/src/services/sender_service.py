@@ -89,7 +89,6 @@ class SenderService:
                 pagination=pagination
             )
         except Exception as e:
-            self.session.rollback()
             logger.error(f"[SENDER SERVICE] Error getting senders: {e}")
             raise InternalServerException(
                 "[SENDER SERVICE] Failed to get senders"
@@ -99,8 +98,7 @@ class SenderService:
     def get_sender_by_id(self, *, sender_id: UUID) -> SenderResponse:
         try:
             # fetch the record from the table
-            statement = select(Sender).where(Sender.id == sender_id)
-            result = self.session.exec(statement).first()
+            result = self.session.get(Sender, sender_id)
 
             if result is None:
                 raise NotFoundException("Sender not found")
@@ -109,7 +107,6 @@ class SenderService:
         except NotFoundException:
             raise
         except Exception as e:
-            self.session.rollback()
             logger.error(f"[SENDER SERVICE] Error getting sender: {e}")
             raise InternalServerException(
                 "[SENDER SERVICE] Failed to get sender"
@@ -119,8 +116,7 @@ class SenderService:
     def update_sender_patch(self, *, sender_id: UUID, sender_request: SenderUpdateRequest) -> SenderResponse:
         try:
             # fetch the record from the table
-            statement = select(Sender).where(Sender.id == sender_id)
-            result = self.session.exec(statement).first()
+            result = self.session.get(Sender, sender_id)
 
             if result is None:
                 raise NotFoundException("Sender not found")
@@ -164,8 +160,7 @@ class SenderService:
     def update_sender_put(self, *, sender_id: UUID, sender_request: SenderRequest) -> SenderResponse:
         try:
             # fetch the record from the table
-            statement = select(Sender).where(Sender.id == sender_id)
-            result = self.session.exec(statement).first()
+            result = self.session.get(Sender, sender_id)
 
             if result is None:
                 raise NotFoundException("Sender not found")
@@ -207,8 +202,7 @@ class SenderService:
     def delete_sender(self, *, sender_id: UUID) -> None:
         try:
             # fetch the record from the table
-            statement = select(Sender).where(Sender.id == sender_id)
-            result = self.session.exec(statement).first()
+            result = self.session.get(Sender, sender_id)
 
             if result is None:
                 raise NotFoundException("Sender not found")

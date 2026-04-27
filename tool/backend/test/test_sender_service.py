@@ -334,7 +334,7 @@ def test_get_sender_by_id_raises_not_found_for_unknown_id(sender_db):
 def test_get_sender_by_id_raises_internal_on_db_error(monkeypatch, sender_db):
     existing = sender_db.exec(select(Sender)).first()
     service = SenderService(session=sender_db)
-    monkeypatch.setattr(sender_db, "exec", MagicMock(side_effect=Exception("DB failure")))
+    monkeypatch.setattr(sender_db, "get", MagicMock(side_effect=Exception("DB failure")))
 
     with pytest.raises(InternalServerException):
         service.get_sender_by_id(sender_id=existing.id)
