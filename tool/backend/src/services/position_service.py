@@ -1,11 +1,12 @@
 import logging
 from src.models import PaginationModel
 from src.models.response_models import PositionListResponse, PositionResponse
+from src.models.request_models import PositionRequest
 from src.models.table_schemas import Position
 from src.core.exceptions import InternalServerException, NotFoundException, ConflictException
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select, func
-from uuid import UUID
+from uuid import UUID, uuid4
 
 logger = logging.getLogger(__name__)
 
@@ -50,8 +51,10 @@ class PositionService:
                 pagination=pagination
             )
         except Exception as e:
-            logger.error(f"Error fetching positions: {e}")
-            raise InternalServerException("Failed to fetch positions from database.") from e
+            logger.error(f"[POSITION SERVICE] Error fetching positions: {e}")
+            raise InternalServerException(
+                "[POSITION SERVICE] Failed to fetch positions"
+            ) from e
     
     # get position by id
     def get_position_by_id(self, *, position_id: UUID) -> PositionResponse:
@@ -99,3 +102,28 @@ class PositionService:
             raise InternalServerException(
                 "[POSITION SERVICE] Failed to delete position"
             ) from e  
+
+    # create position
+    def create_position(self, *, position_request: PositionRequest) -> PositionResponse:
+        try:
+            # generate a uuid
+            unique_id = uuid4()
+
+            # create position
+            position = Position(
+                id=unique_id,
+                name=position_request.name
+            )
+
+            self.session.add(position)
+            self.session.commit()
+            self.session.refresh(position)
+
+            return PositionResponse.model_validate(position)
+        except Exception as e:
+            self.session.rollback()
+            logger.error(f"[POSITION SERVICE] Error creating position: {e}")
+            raise InternalServerException(
+                "[POSITION SERVICE] Failed to create position"
+            ) from e
+    
