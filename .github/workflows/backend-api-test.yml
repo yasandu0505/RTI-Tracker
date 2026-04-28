@@ -11,7 +11,7 @@ on:
       - workflow-github
 
 jobs:
-  test:
+  backend-api-test:
     runs-on: ubuntu-latest
     defaults:
       run:
