@@ -1,5 +1,6 @@
 import pytest
-from uuid import UUID, uuid4
+from datetime import datetime, timezone
+from uuid import uuid4
 from sqlalchemy.exc import OperationalError
 from src.services.receiver_service import ReceiverService
 from src.models.response_models import ReceiverListResponse, ReceiverResponse
@@ -164,4 +165,77 @@ def test_delete_receiver_not_found(receiver_db):
     with pytest.raises(NotFoundException) as excinfo:
         service.delete_receiver(receiver_id=uuid4())
     assert "not found" in str(excinfo.value)
+
+def test_update_receiver_partial_email(receiver_db, make_receiver_update_request):
+    """Test partial update of only the email field."""
+    existing = receiver_db.exec(select(Receiver)).first()
+    original_address = existing.address
+    original_contact = existing.contact_no
+    
+    service = ReceiverService(session=receiver_db)
+    request = make_receiver_update_request(email="partial@example.com")
+    
+    response = service.update_receiver(receiver_id=existing.id, receiver_request=request)
+    
+    assert response.email == "partial@example.com"
+    assert response.address == original_address
+    assert response.contact_no == original_contact
+
+def test_update_receiver_partial_address(receiver_db, make_receiver_update_request):
+    """Test partial update of only the address field."""
+    existing = receiver_db.exec(select(Receiver)).first()
+    original_email = existing.email
+    
+    service = ReceiverService(session=receiver_db)
+    request = make_receiver_update_request(address="Updated partial address")
+    
+    response = service.update_receiver(receiver_id=existing.id, receiver_request=request)
+    
+    assert response.address == "Updated partial address"
+    assert response.email == original_email
+
+def test_update_receiver_partial_contact_no(receiver_db, make_receiver_update_request):
+    """Test partial update of only the contact_no field."""
+    existing = receiver_db.exec(select(Receiver)).first()
+    original_email = existing.email
+    
+    service = ReceiverService(session=receiver_db)
+    request = make_receiver_update_request(contact_no="0779876543")
+    
+    response = service.update_receiver(receiver_id=existing.id, receiver_request=request)
+    
+    assert response.contact_no == "0779876543"
+    assert response.email == original_email
+
+def test_update_receiver_partial_position(receiver_db, make_receiver_update_request):
+    """Test partial update of only the position field."""
+    existing = receiver_db.exec(select(Receiver)).first()
+    new_pos = Position(id=uuid4(), name="New Position", created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc))
+    receiver_db.add(new_pos)
+    receiver_db.commit()
+    
+    service = ReceiverService(session=receiver_db)
+    request = make_receiver_update_request(position_id=new_pos.id)
+    
+    response = service.update_receiver(receiver_id=existing.id, receiver_request=request)
+    
+    assert response.position.id == new_pos.id
+    assert response.position.name == "New Position"
+
+def test_update_receiver_partial_institution(receiver_db, make_receiver_update_request):
+    """Test partial update of only the institution field."""
+    existing = receiver_db.exec(select(Receiver)).first()
+    new_inst = Institution(id=uuid4(), name="New Institution", created_at=datetime.now(timezone.utc), updated_at=datetime.now(timezone.utc))
+    receiver_db.add(new_inst)
+    receiver_db.commit()
+    
+    service = ReceiverService(session=receiver_db)
+    request = make_receiver_update_request(institution_id=new_inst.id)
+    
+    response = service.update_receiver(receiver_id=existing.id, receiver_request=request)
+    
+    assert response.institution.id == new_inst.id
+    assert response.institution.name == "New Institution"
+
+    
 

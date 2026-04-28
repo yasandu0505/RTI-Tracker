@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Optional, Sequence
 from src.models import Position, Institution, PaginationModel
+from src.models.response_models import PositionResponse, InstitutionResponse
 from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -8,8 +9,8 @@ class ReceiverResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True, str_strip_whitespace=True)
     # attributes
     id: UUID = Field(..., description="Unique identifier for the receiver")
-    position: Position = Field(..., description="Position object of the receiver")
-    institution: Institution = Field(..., description="Institution object of the receiver")
+    position: PositionResponse = Field(..., description="Position object of the receiver")
+    institution: InstitutionResponse = Field(..., description="Institution object of the receiver")
     email: Optional[str] = Field(
         None, description="Email of the receiver"
     )

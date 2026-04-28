@@ -4,7 +4,7 @@ import uuid
 from aiohttp import ClientError
 from datetime import datetime, timezone, timedelta
 from sqlmodel import SQLModel, Session, create_engine
-from src.models import RTITemplate, Institution, Position, Receiver, ReceiverRequest
+from src.models import RTITemplate, Institution, Position, Receiver, ReceiverRequest, ReceiverUpdateRequest
 from src.models.request_models import RTITemplateRequest
 from src.services.github_file_service import GithubFileService
 from fastapi import UploadFile
@@ -342,6 +342,29 @@ def make_receiver_request():
             address=address,
             contactNo=contact_no
         )
+
+    return _factory
+
+@pytest.fixture
+def make_receiver_update_request():
+    """Factory for ReceiverUpdateRequest instances."""
+
+    def _factory(
+        position_id: uuid.UUID | None = None,
+        institution_id: uuid.UUID | None = None,
+        email: str | None = None,
+        address: str | None = None,
+        contact_no: str | None = None,
+    ) -> ReceiverUpdateRequest:
+        # Use dict and then parse to handle exclude_unset=True in model_dump
+        data = {}
+        if position_id is not None: data["positionId"] = position_id
+        if institution_id is not None: data["institutionId"] = institution_id
+        if email is not None: data["email"] = email
+        if address is not None: data["address"] = address
+        if contact_no is not None: data["contactNo"] = contact_no
+        
+        return ReceiverUpdateRequest(**data)
 
     return _factory
 

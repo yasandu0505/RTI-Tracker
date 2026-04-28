@@ -1,5 +1,5 @@
 import logging
-from src.models import Receiver, PaginationModel, ReceiverRequest
+from src.models import Receiver, PaginationModel, ReceiverRequest, ReceiverUpdateRequest
 from src.models.response_models import ReceiverListResponse, ReceiverResponse
 from src.core import InternalServerException, ConflictException, NotFoundException
 from sqlmodel import Session, select, func
@@ -30,8 +30,8 @@ class ReceiverService:
             )
             self.session.add(receiver)
             self.session.commit()
-            self.session.refresh(receiver)
-            return ReceiverResponse.model_validate(receiver)
+            
+            return self.get_receiver_by_id(receiver_id=receiver.id)
 
         except IntegrityError as e:
             self.session.rollback()
@@ -104,23 +104,23 @@ class ReceiverService:
             raise InternalServerException("Failed to fetch Receiver from database.") from e
 
     # API
-    def update_receiver(self, *, receiver_id: UUID, receiver_request: ReceiverRequest) -> ReceiverResponse:
+    def update_receiver(self, *, receiver_id: UUID, receiver_request: ReceiverUpdateRequest) -> ReceiverResponse:
         try:
             statement = select(Receiver).where(Receiver.id == receiver_id)
             receiver = self.session.exec(statement).first()
             if not receiver:
                 raise NotFoundException(f"Receiver with ID {receiver_id} not found.")
             
-            receiver.position_id = receiver_request.position_id
-            receiver.institution_id = receiver_request.institution_id
-            receiver.email = receiver_request.email
-            receiver.address = receiver_request.address
-            receiver.contact_no = receiver_request.contact_no
+            # Partial update: only update fields that were actually sent in the request
+            update_data = receiver_request.model_dump(exclude_unset=True)
+            for key, value in update_data.items():
+                setattr(receiver, key, value)
             
             self.session.add(receiver)
             self.session.commit()
-            self.session.refresh(receiver)
-            return ReceiverResponse.model_validate(receiver)
+            
+            return self.get_receiver_by_id(receiver_id=receiver.id)
+
         except NotFoundException:
             raise
         except IntegrityError as e:
