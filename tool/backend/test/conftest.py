@@ -4,7 +4,7 @@ import uuid
 from aiohttp import ClientError
 from datetime import datetime, timezone, timedelta
 from sqlmodel import SQLModel, Session, create_engine
-from src.models import RTITemplate, Institution, Position
+from src.models import RTITemplate, Institution, Position, Receiver
 from src.models.request_models import RTITemplateRequest
 from src.services.github_file_service import GithubFileService
 from fastapi import UploadFile
@@ -278,7 +278,51 @@ def position_db():
         # but for tests we often just want the session.
         yield session
 
+
+# receiver fixtures
+@pytest.fixture
+def receiver_db():
+    """Create an in-memory SQLite DB and provide a fresh session with test receivers."""
+    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
+    SQLModel.metadata.create_all(engine)
+    now = datetime.now(timezone.utc)
     
+    pos1 = Position(id=uuid.uuid4(), name="Position 1", created_at=now, updated_at=now)
+    inst1 = Institution(id=uuid.uuid4(), name="Institution 1", created_at=now, updated_at=now)
+
+    receivers = [
+        Receiver(
+            id=uuid.uuid4(),
+            position=pos1,
+            institution=inst1,
+            email="receiver1@example.com",
+            created_at=now - timedelta(hours=2),
+            updated_at=now - timedelta(hours=2),
+        ),
+        Receiver(
+            id=uuid.uuid4(),
+            position=pos1,
+            institution=inst1,
+            email="receiver2@example.com",
+            created_at=now - timedelta(hours=1),
+            updated_at=now - timedelta(hours=1),
+        ),
+        Receiver(
+            id=uuid.uuid4(),
+            position=pos1,
+            institution=inst1,
+            email="receiver3@example.com",
+            created_at=now,
+            updated_at=now,
+        ),
+    ]
+    
+    with Session(engine) as session:
+        session.add(pos1)
+        session.add(inst1)
+        session.add_all(receivers)
+        session.commit()
+        yield session
 
 # sender fixtures 
 @pytest.fixture
