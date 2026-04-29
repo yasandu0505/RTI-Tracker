@@ -136,47 +136,6 @@ class PositionService:
             raise InternalServerException(
                 "[POSITION SERVICE] Failed to create position"
             ) from e
-
-    # update position [PATCH]
-    def update_position_patch(self, *, position_id: UUID, position_request: PositionRequest) -> PositionResponse:
-        try:
-            # fetch the record from the table
-            result = self.session.get(Position, position_id)
-
-            if result is None:
-                raise NotFoundException("Position not found")
-
-            # update(PATCH) the record
-            # get only provided fields (including explicit nulls)
-            update_data = position_request.model_dump(exclude_unset=True)
-
-            # apply updates dynamically
-            for field, value in update_data.items():
-                setattr(result, field, value)
-
-            self.session.add(result)
-            self.session.commit()
-            self.session.refresh(result)
-
-            return PositionResponse.model_validate(result)
-        except IntegrityError as e:
-            self.session.rollback()
-            # detect unique constraint
-            constraint = e.orig.diag.constraint_name
-
-            if constraint == "positions_name_key":
-                raise ConflictException("Position name already exists")
-
-            else:
-                raise ConflictException("Duplicate values violates unique constraint")
-        except NotFoundException:
-            raise
-        except Exception as e:
-            self.session.rollback()
-            logger.error(f"[POSITION SERVICE] Error updating position: {e}")
-            raise InternalServerException(
-                "[POSITION SERVICE] Failed to update position"
-            ) from e
     
     # update position [PUT]
     def update_position_put(self, *, position_id: UUID, position_request: PositionRequest) -> PositionResponse:

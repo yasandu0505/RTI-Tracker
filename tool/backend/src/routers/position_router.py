@@ -31,14 +31,6 @@ def get_position_by_id_endpoint(
 ):
     return service.get_position_by_id(position_id=position_id)
 
-@router.delete("/positions/{position_id}", response_model=None, status_code=status.HTTP_204_NO_CONTENT)
-def delete_position_endpoint(
-    position_id: Annotated[UUID, Path(title="ID of the position")],
-    service: PositionService = Depends(get_position_service),
-    user: User = Depends(RoleChecker([UserRole.ADMIN, UserRole.USER]))
-):
-    return service.delete_position(position_id=position_id)
-
 @router.post("/positions", response_model=PositionResponse)
 def create_position_endpoint(
     position_request: PositionRequest,
@@ -46,15 +38,6 @@ def create_position_endpoint(
     user: User = Depends(RoleChecker([UserRole.ADMIN, UserRole.USER]))
 ):
     return service.create_position(position_request=position_request)
-
-@router.patch("/positions/{position_id}", response_model=PositionResponse)
-def update_position_patch_endpoint(
-    position_id: Annotated[UUID, Path(title="ID of the position")],
-    position_request: PositionRequest,
-    service: PositionService = Depends(get_position_service),
-    user: User = Depends(RoleChecker([UserRole.ADMIN, UserRole.USER]))
-):
-    return service.update_position_patch(position_id=position_id, position_request=position_request)
 
 @router.put("/positions/{position_id}", response_model=PositionResponse)
 def update_position_put_endpoint(
@@ -64,4 +47,12 @@ def update_position_put_endpoint(
     user: User = Depends(RoleChecker([UserRole.ADMIN, UserRole.USER]))
 ):
     return service.update_position_put(position_id=position_id, position_request=position_request)
+
+@router.delete("/positions/{position_id}", response_model=None, status_code=status.HTTP_204_NO_CONTENT)
+def delete_position_endpoint(
+    position_id: Annotated[UUID, Path(title="ID of the position")],
+    service: PositionService = Depends(get_position_service),
+    user: User = Depends(RoleChecker([UserRole.ADMIN, UserRole.USER]))
+):
+    return service.delete_position(position_id=position_id)
     
