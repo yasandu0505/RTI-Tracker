@@ -59,4 +59,4 @@ def test_get_positions_db_error(monkeypatch, position_db):
     with pytest.raises(InternalServerException) as excinfo:
         service.get_positions()
     
-    assert "Failed to fetch positions from database" in str(excinfo.value)
+    assert "[POSITION SERVICE] Failed to fetch positions" in str(excinfo.value)
