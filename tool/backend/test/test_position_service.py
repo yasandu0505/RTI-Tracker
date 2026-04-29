@@ -78,13 +78,16 @@ def test_get_positions_db_error(monkeypatch, position_db):
 
 def test_get_position_by_id_success(position_db):
     """Return the correct PositionResponse for a valid id."""
-    position_id = _first_position_id(position_db)
+    position = position_db.get(Position, _first_position_id(position_db))
     service = PositionService(session=position_db)
 
-    result = service.get_position_by_id(position_id=position_id)
+    result = service.get_position_by_id(position_id=position.id)
 
     assert isinstance(result, PositionResponse)
-    assert result.id == position_id
+    assert result.id == position.id
+    assert result.name == position.name
+    assert result.created_at == position.created_at
+    assert result.updated_at == position.updated_at
 
 
 def test_get_position_by_id_not_found(position_db):
