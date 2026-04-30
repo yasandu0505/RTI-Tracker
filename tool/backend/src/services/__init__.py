@@ -3,7 +3,7 @@ from .position_service import PositionService
 from .auth_service import AuthService
 from .github_file_service import GithubFileService
 from .sender_service import SenderService
-from .status_service import StatusService
+from .rti_status_service import RTIStatusService
 
 __all__ = [
     "RTITemplateService",
@@ -11,5 +11,5 @@ __all__ = [
     "GithubFileService",
     "PositionService",
     "SenderService",
-    "StatusService"
+    "RTIStatusService"
 ]

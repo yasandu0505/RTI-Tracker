@@ -75,7 +75,7 @@ class Sender(SQLModel, table=True):
     )
 
 
-class Status(SQLModel, table=True):
+class RTIStatus(SQLModel, table=True):
     __tablename__ = "rti_statuses"
 
     # table fields

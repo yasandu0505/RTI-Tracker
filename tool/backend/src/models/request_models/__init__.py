@@ -1,10 +1,10 @@
 from .senders import SenderRequest
 from .rti_templates import RTITemplateRequest
-from .statuses import StatusRequest
+from .rti_statuses import RTIStatusRequest
 
 __all__ = [
     "SenderRequest",
     "RTITemplateRequest",
-    "StatusRequest"
+    "RTIStatusRequest"
 ]
 

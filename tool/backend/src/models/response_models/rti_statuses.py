@@ -5,7 +5,7 @@ from typing import Optional, Sequence
 from src.models import PaginationModel
 
 
-class StatusResponse(BaseModel):
+class RTIStatusResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True, str_strip_whitespace=True)
     # attributes
     id: UUID = Field(
@@ -28,8 +28,8 @@ class StatusResponse(BaseModel):
     )
 
 
-class StatusListResponse(BaseModel):
+class RTIStatusListResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True, str_strip_whitespace=True)
     # attributes
-    data: Sequence[StatusResponse] = Field([], description="List of statuses.")
+    data: Sequence[RTIStatusResponse] = Field([], description="List of statuses.")
     pagination: PaginationModel = Field(..., description="Pagination metadata.")

@@ -1,5 +1,5 @@
 from sqlmodel import Session, select, func
-from src.models import StatusResponse, StatusListResponse, StatusRequest, PaginationModel, Status
+from src.models import RTIStatusResponse, RTIStatusListResponse, RTIStatusRequest, PaginationModel, RTIStatus
 from src.core.exceptions import InternalServerException, ConflictException, NotFoundException
 from uuid import uuid4
 import logging
@@ -8,32 +8,32 @@ from sqlalchemy.exc import IntegrityError
 
 logger = logging.getLogger(__name__)
 
-class StatusService:
+class RTIStatusService:
     """
-    This service is responsible for executing all status related operations
+    This service is responsible for executing all RTI status related operations
     """
 
     def __init__(self, session: Session):
         self.session = session
 
     # API
-    # create status
-    def create_status(self, *, status_request: StatusRequest) -> StatusResponse:
+    # create RTI status
+    def create_rti_status(self, *, rti_status_request: RTIStatusRequest) -> RTIStatusResponse:
         try:
             # generate a uuid
             unique_id = uuid4()
 
-            # create status
-            status = Status(
+            # create RTI status
+            rti_status = RTIStatus(
                 id=unique_id,
-                name=status_request.name,
+                name=rti_status_request.name,
           )
 
-            self.session.add(status)
+            self.session.add(rti_status)
             self.session.commit()
-            self.session.refresh(status)
+            self.session.refresh(rti_status)
 
-            return StatusResponse.model_validate(status)
+            return RTIStatusResponse.model_validate(rti_status)
 
         except IntegrityError as e:
             self.session.rollback()
@@ -41,32 +41,32 @@ class StatusService:
             constraint = e.orig.diag.constraint_name
 
             if constraint == "rti_statuses_name_key":
-                raise ConflictException("Status name already exists")
+                raise ConflictException("RTI Status name already exists")
 
             else:
                 raise ConflictException("Duplicate values violates unique constraint")
         except Exception as e:
             self.session.rollback()
-            logger.error(f"[STATUS SERVICE] Error creating status: {e}")
+            logger.error(f"[RTI STATUS SERVICE] Error creating RTI status: {e}")
             raise InternalServerException(
-                "[STATUS SERVICE] Failed to create status"
+                "[RTI STATUS SERVICE] Failed to create RTI status"
             ) from e
     
-    # get status list
-    def get_status_list(self, *, page: int = 1, page_size: int = 10) -> StatusListResponse:
+    # get RTI status list
+    def get_rti_status_list(self, *, page: int = 1, page_size: int = 10) -> RTIStatusListResponse:
         try:
             # calculate the offset
             offset = (page - 1) * page_size
 
             # fetch the records from the table
-            statement_records = select(Status)\
-                .order_by(Status.created_at.desc())\
+            statement_records = select(RTIStatus)\
+                .order_by(RTIStatus.created_at.desc())\
                 .offset(offset)\
                 .limit(page_size)
             results = self.session.exec(statement_records).all()
             
             # fetch the total record count
-            statement_count = select(func.count()).select_from(Status)
+            statement_count = select(func.count()).select_from(RTIStatus)
             total_items = self.session.exec(statement_count).one()
 
             # pagination response
@@ -78,58 +78,58 @@ class StatusService:
             )
             
             # return the final response
-            return StatusListResponse(
-                data=[StatusResponse.model_validate(r) for r in results],
+            return RTIStatusListResponse(
+                data=[RTIStatusResponse.model_validate(r) for r in results],
                 pagination=pagination
             )
         except Exception as e:
-            logger.error(f"[STATUS SERVICE] Error getting statuses: {e}")
+            logger.error(f"[RTI STATUS SERVICE] Error getting RTI statuses: {e}")
             raise InternalServerException(
-                "[STATUS SERVICE] Failed to get statuses"
+                "[RTI STATUS SERVICE] Failed to get RTI statuses"
             ) from e
     
-    # get status by id
-    def get_status_by_id(self, *, status_id: UUID) -> StatusResponse:
+    # get RTI status by id
+    def get_rti_status_by_id(self, *, rti_status_id: UUID) -> RTIStatusResponse:
         try:
             # fetch the record from the table
-            result = self.session.get(Status, status_id)
+            result = self.session.get(RTIStatus, rti_status_id)
 
             if result is None:
-                raise NotFoundException(f"Status with id {status_id} not found.")
+                raise NotFoundException(f"RTI Status with id {rti_status_id} not found.")
 
-            return StatusResponse.model_validate(result)
+            return RTIStatusResponse.model_validate(result)
         except NotFoundException:
             raise
         except Exception as e:
-            logger.error(f"[STATUS SERVICE] Error getting status: {e}")
+            logger.error(f"[RTI STATUS SERVICE] Error getting RTI status: {e}")
             raise InternalServerException(
-                "[STATUS SERVICE] Failed to get status"
+                "[RTI STATUS SERVICE] Failed to get RTI status"
             ) from e
     
-    # update status [PUT]
-    def update_status_put(self, *, status_id: UUID, status_request: StatusRequest) -> StatusResponse:
+    # update RTI status [PUT]
+    def update_rti_status_put(self, *, rti_status_id: UUID, rti_status_request: RTIStatusRequest) -> RTIStatusResponse:
         try:
             # fetch the record from the table
-            result = self.session.get(Status, status_id)
+            result = self.session.get(RTIStatus, rti_status_id)
 
             if result is None:
-                raise NotFoundException(f"Status with id {status_id} not found.")
+                raise NotFoundException(f"RTI Status with id {rti_status_id} not found.")
 
             # update(PUT) the record
-            result.name = status_request.name
+            result.name = rti_status_request.name
 
             self.session.add(result)
             self.session.commit()
             self.session.refresh(result)
 
-            return StatusResponse.model_validate(result)
+            return RTIStatusResponse.model_validate(result)
         except IntegrityError as e:
             self.session.rollback()
             # detect unique constraint
             constraint = e.orig.diag.constraint_name
 
             if constraint == "rti_statuses_name_key":
-                raise ConflictException("Status name already exists")
+                raise ConflictException("RTI Status name already exists")
 
             else:
                 raise ConflictException("Duplicate values violates unique constraint")
@@ -137,19 +137,19 @@ class StatusService:
             raise
         except Exception as e:
             self.session.rollback()
-            logger.error(f"[STATUS SERVICE] Error updating status: {e}")
+            logger.error(f"[RTI STATUS SERVICE] Error updating RTI status: {e}")
             raise InternalServerException(
-                "[STATUS SERVICE] Failed to update status"
+                "[RTI STATUS SERVICE] Failed to update RTI status"
             ) from e
     
-    # delete status
-    def delete_status(self, *, status_id: UUID) -> None:
+    # delete RTI status
+    def delete_rti_status(self, *, rti_status_id: UUID) -> None:
         try:
             # fetch the record from the table
-            result = self.session.get(Status, status_id)
+            result = self.session.get(RTIStatus, rti_status_id)
 
             if result is None:
-                raise NotFoundException(f"Status with id {status_id} not found.")
+                raise NotFoundException(f"RTI Status with id {rti_status_id} not found.")
 
             # delete the record
             self.session.delete(result)
@@ -159,17 +159,17 @@ class StatusService:
         except IntegrityError as e:
             self.session.rollback()
             # detect foreign key constraint violation
-            logger.error(f"[STATUS SERVICE] Error deleting status: {e}")
+            logger.error(f"[RTI STATUS SERVICE] Error deleting RTI status: {e}")
             raise ConflictException(
-                "Cannot delete status because it is used in some other records"
+                "Cannot delete RTI status because it is used in some other records"
             ) from e
         except NotFoundException:
             raise
         except Exception as e:
             self.session.rollback()
-            logger.error(f"[STATUS SERVICE] Error deleting status: {e}")
+            logger.error(f"[RTI STATUS SERVICE] Error deleting RTI status: {e}")
             raise InternalServerException(
-                "[STATUS SERVICE] Failed to delete status"
+                "[RTI STATUS SERVICE] Failed to delete RTI status"
             ) from e    
         
 

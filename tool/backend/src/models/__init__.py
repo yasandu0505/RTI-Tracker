@@ -1,8 +1,8 @@
-from .table_schemas import RTITemplate, Sender, Institution, Position, Status
+from .table_schemas import RTITemplate, Sender, Institution, Position, RTIStatus
 from .common import User, PaginationModel, UserRole
-from .request_models import SenderRequest, StatusRequest
-from .response_models import SenderResponse , SenderListResponse
-from .response_models import StatusResponse , StatusListResponse
+from .request_models import SenderRequest, RTIStatusRequest
+from .response_models import SenderResponse, SenderListResponse
+from .response_models import RTIStatusResponse, RTIStatusListResponse
 
 __all__ = [
     "RTITemplate",
@@ -12,11 +12,11 @@ __all__ = [
     "UserRole",
     "Institution",
     "SenderRequest",
-    "StatusRequest",
+    "RTIStatusRequest",
     "SenderResponse",
     "Sender",
     "SenderListResponse",
-    "Status",
-    "StatusResponse",
-    "StatusListResponse"
+    "RTIStatus",
+    "RTIStatusResponse",
+    "RTIStatusListResponse"
 ]

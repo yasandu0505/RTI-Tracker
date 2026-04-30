@@ -10,7 +10,7 @@ from src.services.github_file_service import GithubFileService
 from fastapi import UploadFile
 from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
 from src.utils import http_client
-from src.models import Sender, Status
+from src.models import Sender, RTIStatus
 from src.models.response_models import SenderResponse
 from src.models.request_models import SenderRequest
 from src.services import SenderService
@@ -356,37 +356,37 @@ def mock_sender_service():
 
 # status fixtures
 @pytest.fixture
-def make_status_request():
+def make_rti_status_request():
     """Factory for StatusRequest instances."""
-    from src.models.request_models import StatusRequest
+    from src.models.request_models import RTIStatusRequest
 
-    def _factory(name: str = "Dispatched") -> StatusRequest:
-        return StatusRequest(name=name)
+    def _factory(name: str = "Dispatched") -> RTIStatusRequest:
+        return RTIStatusRequest(name=name)
 
     return _factory
 
 
 @pytest.fixture
-def status_db():
+def rti_status_db():
     """In-memory DB seeded with three Status rows for service-level tests."""
     engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
     SQLModel.metadata.create_all(engine)
     now = datetime.now(timezone.utc)
 
     statuses = [
-        Status(
+        RTIStatus(
             id=uuid.uuid4(),
             name="Pending",
             created_at=now - timedelta(hours=2),
             updated_at=now - timedelta(hours=2),
         ),
-        Status(
+        RTIStatus(
             id=uuid.uuid4(),
             name="Delivery",
             created_at=now - timedelta(hours=1),
             updated_at=now - timedelta(hours=1),
         ),
-        Status(
+        RTIStatus(
             id=uuid.uuid4(),
             name="Completed",
             created_at=now,
