@@ -56,40 +56,6 @@ async def test_create_rti_request_success(rti_request_db, make_file_service, mak
     fs.create_file.assert_called_once()
 
 @pytest.mark.asyncio
-async def test_create_rti_request_directory_name_format(rti_request_db, make_file_service, make_rti_request_request):
-    """Verifies the directory name contains title, receiver info, and UUID."""
-    sender = rti_request_db.exec(select(Sender)).first()
-    receiver = rti_request_db.exec(select(Receiver)).first()
-    
-    fs = make_file_service()
-    service = RTIRequestService(session=rti_request_db, file_service=fs)
-    
-    title = "A very long title that should be truncated after ten words in the folder name"
-    request = make_rti_request_request(
-        sender_id=sender.id,
-        receiver_id=receiver.id,
-        title=title
-    )
-    
-    await service.create_rti_request(request_data=request)
-    
-    fs.create_file.assert_called_once()
-    file_path = fs.create_file.call_args.kwargs["file_path"]
-    
-    # Check path format: rti-requests/TruncatedTitle - ReceiverName - UUID/UUID.ext
-    assert file_path.startswith("rti-requests/")
-    
-    # Verify truncated title (max 10 words)
-    truncated_title_part = " ".join(title.split()[:10])
-    # The sanitization removes non-alphanumeric except space and dash
-    expected_title_part = re.sub(r'[^a-zA-Z0-9\s\-]+', '', truncated_title_part).strip()
-    assert expected_title_part in file_path
-    
-    # Verify receiver name part (Position Institution)
-    receiver_name_part = f"{receiver.position.name} {receiver.institution.name}"
-    assert receiver_name_part in file_path
-
-@pytest.mark.asyncio
 async def test_create_rti_request_invalid_file_extension(rti_request_db, make_file_service, make_rti_request_request):
     """BadRequestException raised for unsupported file extensions."""
     service = RTIRequestService(session=rti_request_db, file_service=make_file_service())
@@ -99,18 +65,6 @@ async def test_create_rti_request_invalid_file_extension(rti_request_db, make_fi
     with pytest.raises(BadRequestException) as exc:
         await service.create_rti_request(request_data=request)
     assert "valid extension" in str(exc.value)
-
-@pytest.mark.asyncio
-async def test_create_rti_request_receiver_not_found(rti_request_db, make_file_service, make_rti_request_request):
-    """BadRequestException raised when receiver does not exist."""
-    sender = rti_request_db.exec(select(Sender)).first()
-    service = RTIRequestService(session=rti_request_db, file_service=make_file_service())
-    
-    request = make_rti_request_request(sender_id=sender.id, receiver_id=uuid.uuid4())
-    
-    with pytest.raises(BadRequestException) as exc:
-        await service.create_rti_request(request_data=request)
-    assert "Receiver with id" in str(exc.value)
 
 @pytest.mark.asyncio
 async def test_create_rti_request_missing_created_status(rti_request_db, make_file_service, make_rti_request_request):

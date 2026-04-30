@@ -20,11 +20,11 @@ def get_rti_request_service(session: SessionDep, file_service: GithubFileService
 @router.post("/rti_requests", response_model=RTIRequestResponse)
 async def create_rti_request_endpoint(
     title: Annotated[str, Form(description="Title of the RTI Request")],
-    sender_id: Annotated[UUID, Form(description="ID of the sender")],
-    receiver_id: Annotated[UUID, Form(description="ID of the receiver")],
+    sender_id: Annotated[UUID, Form(alias="senderId", description="ID of the sender")],
+    receiver_id: Annotated[UUID, Form(alias="receiverId", description="ID of the receiver")],
     file: Annotated[UploadFile, File(description="RTI Request file (pdf or doc)")],
     description: Annotated[Optional[str], Form(description="Detailed description of the RTI Request")] = None,
-    rti_template_id: Annotated[Optional[UUID], Form(description="ID of the RTI Template")] = None,
+    rti_template_id: Annotated[Optional[UUID], Form(alias="rtiTemplateId", description="ID of the RTI Template")] = None,
     service: RTIRequestService = Depends(get_rti_request_service),
     user: User = Depends(RoleChecker([UserRole.ADMIN, UserRole.USER]))
 ):

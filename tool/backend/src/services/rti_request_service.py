@@ -38,29 +38,12 @@ class RTIRequestService:
                 raise BadRequestException("RTI Request file is required")
 
             _, ext = os.path.splitext(request_data.file.filename)
-            if not ext or ext.lower() not in [".pdf", ".doc", ".docx"]:
-                raise BadRequestException(f"{request_data.file.filename} doesn't have a valid extension (.pdf, .doc, .docx)")
+            if not ext or ext.lower() not in [".pdf"]:
+                raise BadRequestException(f"{request_data.file.filename} doesn't have a valid extension (.pdf)")
+    
+            file_path = f"rti-requests/{unique_id}/{unique_id}{ext.lower()}"
 
-            # 2. Format directory name
-            # Fetch receiver to get the name
-            receiver = self.session.get(Receiver, request_data.receiver_id)
-            if not receiver:
-                raise BadRequestException(f"Receiver with id {request_data.receiver_id} not found")
-            
-            receiver_name = f"{receiver.position.name} {receiver.institution.name}"
-            
-            # truncate title up to 10 words
-            title_words = request_data.title.split()[:10]
-            truncated_title = " ".join(title_words)
-            
-            # directory name: Title of the RTI - Receiver Name - unique_id
-            raw_directory_name = f"{truncated_title} - {receiver_name} - {unique_id}"
-            
-            # sanitize for directory name (replace invalid chars but keep spaces and dashes)
-            directory_name = re.sub(r'[^a-zA-Z0-9\s\-]+', '', raw_directory_name).strip()
-            file_path = f"rti-requests/{directory_name}/{unique_id}{ext.lower()}"
-
-            # 3. Upload file
+            # 2. Upload file
             content = await request_data.file.read()
             response = await self.file_service.create_file(
                 file_path=file_path,
@@ -74,7 +57,7 @@ class RTIRequestService:
 
             uploaded_file_path = relative_path
 
-            # 4. Insert RTIRequest
+            # 3. Insert RTIRequest
             rti_request = RTIRequest(
                 id=unique_id,
                 title=request_data.title,
@@ -85,7 +68,7 @@ class RTIRequestService:
             )
             self.session.add(rti_request)
 
-            # 5. Insert RTIStatusHistories
+            # 4. Insert RTIStatusHistories
             statement = select(RTIStatus).where(RTIStatus.name == "CREATED")
             created_status = self.session.exec(statement).first()
 
