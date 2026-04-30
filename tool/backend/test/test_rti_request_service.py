@@ -109,17 +109,17 @@ async def test_create_rti_request_db_failure_rolls_back(rti_request_db, monkeypa
     fs.delete_file.assert_called_once_with(file_path=relative_path)
 
 @pytest.mark.asyncio
-async def test_create_rti_request_integrity_error(rti_request_db, make_file_service, make_rti_request_request):
-    """ConflictException raised on IntegrityError (e.g. Foreign Key violation)."""
+async def test_create_rti_request_not_found(rti_request_db, make_file_service, make_rti_request_request):
+    """NotFoundException raised when a foreign key (sender/receiver) is not found."""
     receiver = rti_request_db.exec(select(Receiver)).first()
     
-    # Use a non-existent sender_id to trigger a Foreign Key violation
+    # Use a non-existent sender_id
     non_existent_sender_id = uuid.uuid4()
     
     service = RTIRequestService(session=rti_request_db, file_service=make_file_service())
     request = make_rti_request_request(sender_id=non_existent_sender_id, receiver_id=receiver.id)
     
-    with pytest.raises(ConflictException):
+    with pytest.raises(NotFoundException):
         await service.create_rti_request(request_data=request)
 
 @pytest.mark.asyncio

@@ -3,11 +3,23 @@ from typing import Optional, List
 from uuid import UUID
 from enum import Enum
 from sqlmodel import SQLModel, Field, func, CheckConstraint, Relationship
-from sqlalchemy import Column, JSON, Enum as SAEnum
+from sqlalchemy import Column, Enum as SAEnum
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.types import JSON
 
 class RTIDirection(str, Enum):
     sent = "sent"
     received = "received"
+
+class RTIStatusName(str, Enum):
+    CREATED = "CREATED"
+    APPROVAL = "APPROVAL"
+    DELIVERY = "DELIVERY"
+    ACKNOWLEDGE = "ACKNOWLEDGE"
+    ACCEPTED = "ACCEPTED"
+    REJECTED = "REJECTED"
+    COMPLETED = "COMPLETED"
+    APPEAL = "APPEAL"
 
 class RTITemplate(SQLModel, table=True):
     __tablename__ = "rti_templates"
@@ -180,7 +192,7 @@ class RTIStatusHistories(SQLModel, table=True):
     description: Optional[str] = Field(default=None, description="description for the RTI Status History")
     entry_time: datetime = Field(description="entry time for the RTI Status History")
     exit_time: Optional[datetime] = Field(default=None, description="exit time for the RTI Status History")
-    files: List[str] = Field(..., sa_column=Column(JSON), description="List of URLs for the RTI status history files")
+    files: List[str] = Field(..., sa_column=Column(JSONB().with_variant(JSON, "sqlite")), description="List of URLs for the RTI status history files")
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         description="ISO 8601 timestamp of when the rti status history was created",

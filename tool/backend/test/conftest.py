@@ -4,7 +4,7 @@ import uuid
 from aiohttp import ClientError
 from datetime import datetime, timezone, timedelta
 from sqlmodel import SQLModel, Session, create_engine
-from src.models import RTITemplate, Institution, Position, Receiver, ReceiverRequest, ReceiverUpdateRequest, RTIRequest, RTIStatus, RTIStatusHistories
+from src.models import RTITemplate, Institution, Position, Receiver, ReceiverRequest, ReceiverUpdateRequest, RTIRequest, RTIStatus, RTIStatusHistories, RTIStatusName
 from src.models.request_models import RTITemplateRequest, PositionRequest
 from src.services.github_file_service import GithubFileService
 from fastapi import UploadFile
@@ -489,7 +489,7 @@ def rti_request_db():
     now = datetime.now(timezone.utc)
 
     # 1. Seed Status
-    status_created = RTIStatus(id=uuid.uuid4(), name="CREATED", created_at=now, updated_at=now)
+    status_created = RTIStatus(id=uuid.uuid4(), name=RTIStatusName.CREATED, created_at=now, updated_at=now)
     
     # 2. Seed Sender
     sender = Sender(

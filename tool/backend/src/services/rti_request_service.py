@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import select, Session, func
 from src.models import PaginationModel
 from src.services.github_file_service import GithubFileService
-from src.models.table_schemas.table_schemas import RTIRequest, RTIStatus, RTIStatusHistories, RTIDirection, Receiver
+from src.models.table_schemas.table_schemas import RTIRequest, RTIStatus, RTIStatusHistories, RTIDirection, Receiver, Sender, RTITemplate, RTIStatusName
 from src.models.response_models.rti_requests import RTIRequestResponse, RTIRequestListResponse
 from src.models.request_models.rti_requests import RTIRequestRequest, RTIRequestUpdateRequest
 from src.core.exceptions import InternalServerException, BadRequestException, NotFoundException, ConflictException
@@ -40,6 +40,14 @@ class RTIRequestService:
             _, ext = os.path.splitext(request_data.file.filename)
             if not ext or ext.lower() not in [".pdf"]:
                 raise BadRequestException(f"{request_data.file.filename} doesn't have a valid extension (.pdf)")
+
+            # 1.1 Validate foreign keys
+            if not self.session.get(Sender, request_data.sender_id):
+                raise NotFoundException(f"Sender with id {request_data.sender_id} not found.")
+            if not self.session.get(Receiver, request_data.receiver_id):
+                raise NotFoundException(f"Receiver with id {request_data.receiver_id} not found.")
+            if request_data.rti_template_id and not self.session.get(RTITemplate, request_data.rti_template_id):
+                raise NotFoundException(f"RTI Template with id {request_data.rti_template_id} not found.")
     
             file_path = f"rti-requests/{unique_id}/{unique_id}{ext.lower()}"
 
@@ -69,7 +77,7 @@ class RTIRequestService:
             self.session.add(rti_request)
 
             # 4. Insert RTIStatusHistories
-            statement = select(RTIStatus).where(RTIStatus.name == "CREATED")
+            statement = select(RTIStatus).where(RTIStatus.name == RTIStatusName.CREATED)
             created_status = self.session.exec(statement).first()
 
             if not created_status:
@@ -121,7 +129,7 @@ class RTIRequestService:
             offset = (page - 1) * page_size
 
             # fetch the records from the table
-            statement_records = select(RTIRequest).offset(offset).limit(page_size)
+            statement_records = select(RTIRequest).order_by(RTIRequest.created_at.desc()).offset(offset).limit(page_size)
             results = self.session.exec(statement_records).all()
             
             # fetch the total record count
@@ -149,7 +157,7 @@ class RTIRequestService:
     def get_rti_request_by_id(
         self,
         *,
-        request_id
+        request_id: UUID
     ) -> RTIRequestResponse:
         """Fetches a single RTI Request by its ID."""
         try:
@@ -188,6 +196,21 @@ class RTIRequestService:
             if not rti_request:
                 raise NotFoundException(f"RTI Request with id {request_data.id} not found.")
 
+            # Check if request has progressed
+            statement_histories = select(RTIStatusHistories).where(RTIStatusHistories.rti_request_id == target_id)
+            histories = self.session.exec(statement_histories).all()
+            if len(histories) > 1:
+                raise ConflictException("Cannot update RTI Request because it has associated status history records beyond creation.")
+
+            # Validate foreign keys if they are being updated
+            update_data = request_data.model_dump(exclude_unset=True)
+            if "sender_id" in update_data and not self.session.get(Sender, update_data["sender_id"]):
+                raise NotFoundException(f"Sender with id {update_data['sender_id']} not found.")
+            if "receiver_id" in update_data and not self.session.get(Receiver, update_data["receiver_id"]):
+                raise NotFoundException(f"Receiver with id {update_data['receiver_id']} not found.")
+            if "rti_template_id" in update_data and update_data["rti_template_id"] and not self.session.get(RTITemplate, update_data["rti_template_id"]):
+                raise NotFoundException(f"RTI Template with id {update_data['rti_template_id']} not found.")
+
             old_file_data: Dict | None = None
             old_file_path: str | None = None
             new_file_path: str | None = None
@@ -199,7 +222,7 @@ class RTIRequestService:
                     raise BadRequestException(f"{request_data.file.filename} doesn't have a valid extension (.pdf)")
 
                 # Find the 'CREATED' status history to get the current file path
-                status_statement = select(RTIStatus).where(RTIStatus.name == "CREATED")
+                status_statement = select(RTIStatus).where(RTIStatus.name == RTIStatusName.CREATED)
                 created_status = self.session.exec(status_statement).first()
 
                 if not created_status:
@@ -240,8 +263,7 @@ class RTIRequestService:
                     status_history.files = [new_file_path]
                     self.session.add(status_history)
 
-            # 2. Update other fields
-            update_data = request_data.model_dump(exclude_unset=True)
+            # Update other fields
             for key, value in update_data.items():
                 if key not in ["id", "file"] and hasattr(rti_request, key):
                     setattr(rti_request, key, value)
@@ -292,7 +314,7 @@ class RTIRequestService:
     async def delete_rti_request(
         self,
         *,
-        request_id
+        request_id: UUID
     ) -> None:
         """Deletes an RTI Request and its associated history and files."""
         try:
@@ -357,6 +379,17 @@ class RTIRequestService:
             raise
         except Exception as e:
             self.session.rollback()
+            # Restore files to GitHub on unexpected failure
+            for backup in old_files_backup:
+                try:
+                    await self.file_service.create_file(
+                        file_path=backup["path"],
+                        content=backup["content"],
+                        message=f"Rollback: restore file for deleted RTI Request {target_id}"
+                    )
+                except Exception as ex:
+                    logger.error(f"[RTI SERVICE] Rollback failed (generic) to restore {backup['path']}: {ex}")
+
             logger.error(f"[RTI SERVICE] Error deleting RTI request: {e}")
             raise InternalServerException(f"Failed to delete RTI request: {e}") from e
     

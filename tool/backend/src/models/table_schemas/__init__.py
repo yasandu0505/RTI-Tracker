@@ -1,4 +1,4 @@
-from .table_schemas import RTITemplate, Institution, Position, Sender, Receiver, RTIRequest, RTIStatus, RTIStatusHistories
+from .table_schemas import RTITemplate, Institution, Position, Sender, Receiver, RTIRequest, RTIStatus, RTIStatusHistories, RTIStatusName
 
 __all__ = [
     "RTITemplate",
@@ -8,6 +8,7 @@ __all__ = [
     "Receiver",
     "RTIRequest",
     "RTIStatus",
-    "RTIStatusHistories"
+    "RTIStatusHistories",
+    "RTIStatusName"
 ]
 

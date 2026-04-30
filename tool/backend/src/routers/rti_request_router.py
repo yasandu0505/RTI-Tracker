@@ -29,7 +29,7 @@ async def get_rti_requests_endpoint(
 
 @router.get("/rti_requests/{id}", response_model=RTIRequestResponse)
 def get_rti_request_by_id_endpoint(
-    id: Annotated[str, Path(title="ID of the RTI Request")],
+    id: Annotated[UUID, Path(title="ID of the RTI Request")],
     service: RTIRequestService = Depends(get_rti_request_service),
     user: User = Depends(RoleChecker([UserRole.ADMIN, UserRole.USER]))
 ):
@@ -40,7 +40,7 @@ async def create_rti_request_endpoint(
     title: Annotated[str, Form(description="Title of the RTI Request")],
     sender_id: Annotated[UUID, Form(alias="senderId", description="ID of the sender")],
     receiver_id: Annotated[UUID, Form(alias="receiverId", description="ID of the receiver")],
-    file: Annotated[UploadFile, File(description="RTI Request file (pdf or doc)")],
+    file: Annotated[UploadFile, File(description="RTI Request file (pdf only)")],
     description: Annotated[Optional[str], Form(description="Detailed description of the RTI Request")] = None,
     rti_template_id: Annotated[Optional[UUID], Form(alias="rtiTemplateId", description="ID of the RTI Template")] = None,
     service: RTIRequestService = Depends(get_rti_request_service),
@@ -59,11 +59,11 @@ async def create_rti_request_endpoint(
 
 @router.put("/rti_requests/{id}", response_model=RTIRequestResponse)
 async def update_rti_request_endpoint(
-    id: Annotated[str, Path(title="ID of the RTI Request")],
+    id: Annotated[UUID, Path(title="ID of the RTI Request")],
     title: Annotated[Optional[str], Form(description="Title of the RTI Request")] = None,
     sender_id: Annotated[Optional[UUID], Form(alias="senderId", description="ID of the sender")] = None,
     receiver_id: Annotated[Optional[UUID], Form(alias="receiverId", description="ID of the receiver")] = None,
-    file: Annotated[Optional[UploadFile], File(description="RTI Request file (pdf or doc)")] = None,
+    file: Annotated[Optional[UploadFile], File(description="RTI Request file (pdf only)")] = None,
     description: Annotated[Optional[str], Form(description="Detailed description of the RTI Request")] = None,
     rti_template_id: Annotated[Optional[UUID], Form(alias="rtiTemplateId", description="ID of the RTI Template")] = None,
     service: RTIRequestService = Depends(get_rti_request_service),
@@ -83,7 +83,7 @@ async def update_rti_request_endpoint(
 
 @router.delete("/rti_requests/{id}", status_code=204)
 async def delete_rti_request_endpoint(
-    id: Annotated[str, Path(title="ID of the RTI Request")],
+    id: Annotated[UUID, Path(title="ID of the RTI Request")],
     service: RTIRequestService = Depends(get_rti_request_service),
     user: User = Depends(RoleChecker([UserRole.ADMIN, UserRole.USER]))
 ):
