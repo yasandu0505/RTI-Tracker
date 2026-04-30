@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Form, UploadFile, File, Query
+from fastapi import APIRouter, Depends, Form, UploadFile, File, Query, Path
 from typing import Annotated, Optional
 from uuid import UUID
 
@@ -26,6 +26,14 @@ async def get_rti_requests_endpoint(
 ):
     response = service.get_rti_requests(page=page, page_size=page_size)
     return response
+
+@router.get("/rti_requests/{id}", response_model=RTIRequestResponse)
+def get_rti_request_by_id_endpoint(
+    id: Annotated[str, Path(title="ID of the RTI Request")],
+    service: RTIRequestService = Depends(get_rti_request_service),
+    user: User = Depends(RoleChecker([UserRole.ADMIN, UserRole.USER]))
+):
+    return service.get_rti_request_by_id(request_id=id)
 
 @router.post("/rti_requests", response_model=RTIRequestResponse)
 async def create_rti_request_endpoint(

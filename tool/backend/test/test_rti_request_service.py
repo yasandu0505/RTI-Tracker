@@ -136,6 +136,62 @@ async def test_create_rti_request_without_description(rti_request_db, make_file_
     assert result.description is None
     assert result.title == "No Desc"
 
+# test get rti request by id
+@pytest.mark.asyncio
+async def test_get_rti_request_by_id_success(rti_request_db, make_file_service, make_rti_request_request):
+    """Happy path: RTI Request is retrieved by ID."""
+    sender = rti_request_db.exec(select(Sender)).first()
+    receiver = rti_request_db.exec(select(Receiver)).first()
+    
+    service = RTIRequestService(session=rti_request_db, file_service=make_file_service())
+    
+    # Create one
+    request = make_rti_request_request(sender_id=sender.id, receiver_id=receiver.id)
+    created = await service.create_rti_request(request_data=request)
+    
+    # Get by ID
+    result = service.get_rti_request_by_id(request_id=str(created.id))
+    
+    assert isinstance(result, RTIRequestResponse)
+    assert result.id == created.id
+    assert result.title == created.title
+    assert result.description == created.description
+    assert result.sender.id == sender.id
+    assert result.receiver.id == receiver.id
+    assert result.rti_template is None  # Since we didn't provide one
+    assert result.created_at is not None
+    assert result.updated_at is not None
+
+@pytest.mark.asyncio
+async def test_get_rti_request_by_id_not_found(rti_request_db, make_file_service):
+    """NotFoundException raised when ID doesn't exist."""
+    service = RTIRequestService(session=rti_request_db, file_service=make_file_service())
+    
+    with pytest.raises(NotFoundException) as exc:
+        service.get_rti_request_by_id(request_id=str(uuid.uuid4()))
+    assert "not found" in str(exc.value)
+
+@pytest.mark.asyncio
+async def test_get_rti_request_by_id_invalid_uuid(rti_request_db, make_file_service):
+    """BadRequestException raised for invalid UUID strings."""
+    service = RTIRequestService(session=rti_request_db, file_service=make_file_service())
+    
+    with pytest.raises(BadRequestException) as exc:
+        service.get_rti_request_by_id(request_id="invalid-uuid")
+    assert "Invalid UUID format" in str(exc.value)
+
+@pytest.mark.asyncio
+async def test_get_rti_request_by_id_internal_error(rti_request_db, monkeypatch, make_file_service):
+    """InternalServerException raised on database failure during retrieval."""
+    service = RTIRequestService(session=rti_request_db, file_service=make_file_service())
+    
+    # Mock session.get to raise an exception
+    monkeypatch.setattr(rti_request_db, "get", MagicMock(side_effect=Exception("DB breakdown")))
+    
+    with pytest.raises(InternalServerException) as exc:
+        service.get_rti_request_by_id(request_id=str(uuid.uuid4()))
+    assert "Failed to read RTI request" in str(exc.value)
+
 # test get rti request
 @pytest.mark.asyncio
 async def test_get_rti_requests_success(rti_request_db, make_file_service, make_rti_request_request):

@@ -144,3 +144,30 @@ class RTIRequestService:
         except Exception as e:
             logger.error(f"Error fetching RTI requests: {e}")
             raise InternalServerException("Failed to fetch RTI requests from database.") from e
+
+    # API
+    def get_rti_request_by_id(
+        self,
+        *,
+        request_id
+    ) -> RTIRequestResponse:
+        """Fetches a single RTI Request by its ID."""
+        try:
+            try:
+                target_id = UUID(request_id) if isinstance(request_id, str) else request_id
+            except ValueError:
+                raise BadRequestException(f"Invalid UUID format: {request_id}")
+
+            rti_request = self.session.get(RTIRequest, target_id)
+
+            if not rti_request:
+                raise NotFoundException(f"RTI Request with id {request_id} not found.")
+
+            return RTIRequestResponse.model_validate(rti_request)
+
+        except (BadRequestException, NotFoundException):
+            raise
+        except Exception as e:
+            logger.error(f"[RTI SERVICE] Error reading RTI request: {e}")
+            raise InternalServerException(f"Failed to read RTI request: {e}") from e
+            
