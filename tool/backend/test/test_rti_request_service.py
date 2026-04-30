@@ -346,6 +346,100 @@ async def test_update_rti_request_db_failure_rolls_back_file(rti_request_db, mon
         message=f"Rollback: restore previous version for {created.id}"
     )
 
+# test delete rti request
+@pytest.mark.asyncio
+async def test_delete_rti_request_success(rti_request_db, make_file_service, make_rti_request_request):
+    """Happy path: RTI Request, its history and files are deleted."""
+    sender = rti_request_db.exec(select(Sender)).first()
+    receiver = rti_request_db.exec(select(Receiver)).first()
+    
+    fs = make_file_service()
+    fs.read_file = AsyncMock(return_value={"content": b"content", "sha": "sha"})
+    
+    service = RTIRequestService(session=rti_request_db, file_service=fs)
+    
+    # Create one
+    request = make_rti_request_request(sender_id=sender.id, receiver_id=receiver.id)
+    created = await service.create_rti_request(request_data=request)
+    
+    # Delete it
+    await service.delete_rti_request(request_id=str(created.id))
+    
+    # Verify DB deletion
+    assert rti_request_db.get(RTIRequest, created.id) is None
+    
+    # Verify History deletion
+    histories = rti_request_db.exec(select(RTIStatusHistories).where(RTIStatusHistories.rti_request_id == created.id)).all()
+    assert len(histories) == 0
+    
+    # Verify GitHub deletion
+    fs.delete_file.assert_called()
+
+@pytest.mark.asyncio
+async def test_delete_rti_request_not_found(rti_request_db, make_file_service):
+    """NotFoundException raised when deleting non-existent RTI Request."""
+    service = RTIRequestService(session=rti_request_db, file_service=make_file_service())
+    
+    with pytest.raises(NotFoundException):
+        await service.delete_rti_request(request_id=str(uuid.uuid4()))
+
+@pytest.mark.asyncio
+async def test_delete_rti_request_conflict_rolls_back_files(rti_request_db, monkeypatch, make_file_service, make_rti_request_request):
+    """IntegrityError during deletion triggers file restoration on GitHub."""
+    sender = rti_request_db.exec(select(Sender)).first()
+    receiver = rti_request_db.exec(select(Receiver)).first()
+    
+    file_content = b"original content"
+    fs = make_file_service()
+    fs.read_file = AsyncMock(return_value={"content": file_content, "sha": "sha"})
+    
+    service = RTIRequestService(session=rti_request_db, file_service=fs)
+    
+    # Create one
+    request = make_rti_request_request(sender_id=sender.id, receiver_id=receiver.id)
+    created = await service.create_rti_request(request_data=request)
+    
+    # Mock IntegrityError on commit
+    monkeypatch.setattr(rti_request_db, "commit", MagicMock(side_effect=IntegrityError("conflict", None, None)))
+    
+    with pytest.raises(ConflictException):
+        await service.delete_rti_request(request_id=str(created.id))
+    
+    # Verify create_file called for rollback
+    fs.create_file.assert_called_with(
+        file_path=fs.delete_file.call_args.kwargs["file_path"],
+        content=file_content,
+        message=f"Rollback: restore file for deleted RTI Request {created.id}"
+    )
+
+@pytest.mark.asyncio
+async def test_delete_rti_request_blocked_by_history(rti_request_db, make_file_service, make_rti_request_request):
+    """Deletion is blocked if there are multiple status history records."""
+    sender = rti_request_db.exec(select(Sender)).first()
+    receiver = rti_request_db.exec(select(Receiver)).first()
+    
+    service = RTIRequestService(session=rti_request_db, file_service=make_file_service())
+    
+    # Create one (adds first history)
+    request = make_rti_request_request(sender_id=sender.id, receiver_id=receiver.id)
+    created = await service.create_rti_request(request_data=request)
+    
+    # Add a second history record
+    history2 = RTIStatusHistories(
+        id=uuid.uuid4(),
+        rti_request_id=created.id,
+        status_id=rti_request_db.exec(select(RTIStatus)).first().id, # just use any status
+        direction=RTIDirection.sent,
+        entry_time=datetime.now(timezone.utc),
+        files=[]
+    )
+    rti_request_db.add(history2)
+    rti_request_db.commit()
+    
+    with pytest.raises(ConflictException) as exc:
+        await service.delete_rti_request(request_id=str(created.id))
+    assert "records beyond creation" in str(exc.value)
+
 
 
 

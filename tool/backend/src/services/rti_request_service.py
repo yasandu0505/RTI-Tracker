@@ -287,5 +287,77 @@ class RTIRequestService:
 
             logger.error(f"[RTI SERVICE] Error updating RTI request: {e}")
             raise InternalServerException(f"Failed to update RTI request: {e}") from e
+
+    # API
+    async def delete_rti_request(
+        self,
+        *,
+        request_id
+    ) -> None:
+        """Deletes an RTI Request and its associated history and files."""
+        try:
+            try:
+                target_id = UUID(request_id) if isinstance(request_id, str) else request_id
+            except ValueError:
+                raise BadRequestException(f"Invalid UUID format: {request_id}")
+
+            rti_request = self.session.get(RTIRequest, target_id)
+            if not rti_request:
+                raise NotFoundException(f"RTI Request with id {request_id} not found.")
+
+            # 1. Fetch all histories and their files
+            statement = select(RTIStatusHistories).where(RTIStatusHistories.rti_request_id == target_id)
+            histories = self.session.exec(statement).all()
+            
+            # If there are more than 1 history record, it means the request has progressed
+            # and should not be deleted according to business rules.
+            if len(histories) > 1:
+                raise ConflictException("Cannot delete RTI Request because it has associated status history records beyond creation.")
+
+            all_file_paths = []
+            for history in histories:
+                if history.files:
+                    all_file_paths.extend(history.files)
+
+            old_files_backup = []
+
+            # 2. Backup and delete files from GitHub
+            try:
+                for file_path in all_file_paths:
+                    file_data = await self.file_service.read_file(file_path)
+                    old_files_backup.append({"path": file_path, "content": file_data["content"]})
+                    
+                for file_path in all_file_paths:
+                    await self.file_service.delete_file(file_path=file_path)
+
+                # 3. Delete histories
+                for history in histories:
+                    self.session.delete(history)
+
+                # 4. Delete the request
+                self.session.delete(rti_request)
+                self.session.commit()
+
+            except IntegrityError:
+                self.session.rollback()
+                # Restore files to GitHub
+                for backup in old_files_backup:
+                    try:
+                        await self.file_service.create_file(
+                            file_path=backup["path"],
+                            content=backup["content"],
+                            message=f"Rollback: restore file for deleted RTI Request {target_id}"
+                        )
+                    except Exception as ex:
+                        logger.error(f"[RTI SERVICE] Rollback failed to restore {backup['path']}: {ex}")
+                
+                raise ConflictException("Cannot delete RTI Request because it is connected to other entities.")
+
+        except (BadRequestException, NotFoundException, ConflictException):
+            raise
+        except Exception as e:
+            self.session.rollback()
+            logger.error(f"[RTI SERVICE] Error deleting RTI request: {e}")
+            raise InternalServerException(f"Failed to delete RTI request: {e}") from e
     
             
