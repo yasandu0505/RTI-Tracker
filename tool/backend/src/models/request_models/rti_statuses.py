@@ -1,6 +1,4 @@
-from pydantic import BaseModel, Field, ConfigDict, EmailStr, model_validator
-from typing import Optional
-from src.core.exceptions import BadRequestException
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class RTIStatusRequest(BaseModel):

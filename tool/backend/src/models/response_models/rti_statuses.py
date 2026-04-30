@@ -1,7 +1,7 @@
 from pydantic import BaseModel, ConfigDict, Field
 from uuid import UUID
 from datetime import datetime
-from typing import Optional, Sequence
+from typing import Sequence
 from src.models import PaginationModel
 
 
