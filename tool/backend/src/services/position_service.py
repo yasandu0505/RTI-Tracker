@@ -40,9 +40,9 @@ class PositionService:
             # pagination response
             pagination = PaginationModel(
                 page=page,
-                pageSize=page_size,
-                totalItem=total_items,
-                totalPages=(total_items + page_size - 1) // page_size if total_items > 0 else 0
+                page_size=page_size,
+                total_items=total_items,
+                total_pages=(total_items + page_size - 1) // page_size if total_items > 0 else 0
             )
             
             # return the final response

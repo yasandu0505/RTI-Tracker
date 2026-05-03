@@ -225,14 +225,14 @@ def test_get_sender_list_pagination_total_items(sender_db):
     service = SenderService(session=sender_db)
     result = service.get_sender_list(page=1, page_size=10)
 
-    assert result.pagination.totalItem == 3
+    assert result.pagination.total_items == 3
 
 
 def test_get_sender_list_pagination_total_pages(sender_db):
     service = SenderService(session=sender_db)
     result = service.get_sender_list(page=1, page_size=2)
 
-    assert result.pagination.totalPages == 2
+    assert result.pagination.total_pages == 2
 
 
 def test_get_sender_list_pagination_reflects_page_and_size(sender_db):
@@ -240,7 +240,7 @@ def test_get_sender_list_pagination_reflects_page_and_size(sender_db):
     result = service.get_sender_list(page=2, page_size=2)
 
     assert result.pagination.page == 2
-    assert result.pagination.pageSize == 2
+    assert result.pagination.page_size == 2
 
 
 def test_get_sender_list_page_size_limits_results(sender_db):
@@ -281,8 +281,8 @@ def test_get_sender_list_empty_db_returns_empty_data():
         result = service.get_sender_list()
 
     assert len(result.data) == 0
-    assert result.pagination.totalItem == 0
-    assert result.pagination.totalPages == 0
+    assert result.pagination.total_items == 0
+    assert result.pagination.total_pages == 0
 
 
 def test_get_sender_list_raises_internal_on_db_error(monkeypatch, sender_db):
