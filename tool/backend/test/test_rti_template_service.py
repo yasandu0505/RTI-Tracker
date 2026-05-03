@@ -17,9 +17,9 @@ async def test_get_rti_templates_default(rti_template_db, make_file_service):
     response = service.get_rti_templates()
     
     assert response.pagination.page == 1
-    assert response.pagination.pageSize == 10
-    assert response.pagination.totalItems == 3
-    assert response.pagination.totalPages == 1
+    assert response.pagination.page_size == 10
+    assert response.pagination.total_items == 3
+    assert response.pagination.total_pages == 1
     assert len(response.data) == 3
 
 @pytest.mark.asyncio
@@ -30,9 +30,9 @@ async def test_get_rti_templates_custom_page(rti_template_db, make_file_service)
     response = service.get_rti_templates(page=2, page_size=2)
     
     assert response.pagination.page == 2
-    assert response.pagination.pageSize == 2
-    assert response.pagination.totalItems == 3
-    assert response.pagination.totalPages == 2
+    assert response.pagination.page_size == 2
+    assert response.pagination.total_items == 3
+    assert response.pagination.total_pages == 2
     assert len(response.data) == 1  # Only one record left on page 2
 
 @pytest.mark.asyncio
@@ -47,8 +47,8 @@ async def test_get_rti_templates_empty_db(make_file_service):
         response = service.get_rti_templates()
         
         assert response.pagination.page == 1
-        assert response.pagination.totalItems == 0
-        assert response.pagination.totalPages == 0
+        assert response.pagination.total_items == 0
+        assert response.pagination.total_pages == 0
         assert response.data == []
 
 @pytest.mark.asyncio
@@ -62,7 +62,7 @@ async def test_get_rti_templates_page_out_of_bounds(rti_template_db, make_file_s
     assert response.pagination.page == 10
     assert response.data == []
     # totalPages still correctly reflects actual data
-    assert response.pagination.totalPages == 2
+    assert response.pagination.total_pages == 2
 
 @pytest.mark.asyncio
 async def test_get_rti_templates_raises_internal_exception(monkeypatch, rti_template_db, make_file_service):

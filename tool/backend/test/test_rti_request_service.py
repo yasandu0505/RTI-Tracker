@@ -255,10 +255,10 @@ async def test_get_rti_requests_success(rti_request_db, make_file_service, make_
     response = service.get_rti_requests(page=1, page_size=2)
     
     assert len(response.data) == 2
-    assert response.pagination.totalItems == 3
-    assert response.pagination.totalPages == 2
+    assert response.pagination.total_items == 3
+    assert response.pagination.total_pages == 2
     assert response.pagination.page == 1
-    assert response.pagination.pageSize == 2
+    assert response.pagination.page_size == 2
 
 @pytest.mark.asyncio
 async def test_get_rti_requests_empty_db(make_file_service):
@@ -270,8 +270,8 @@ async def test_get_rti_requests_empty_db(make_file_service):
         response = service.get_rti_requests()
         
         assert response.pagination.page == 1
-        assert response.pagination.totalItems == 0
-        assert response.pagination.totalPages == 0
+        assert response.pagination.total_items == 0
+        assert response.pagination.total_pages == 0
         assert response.data == []
 
 @pytest.mark.asyncio
