@@ -151,14 +151,14 @@ def test_get_rti_status_list_pagination_total_items(rti_status_db):
     service = RTIStatusService(session=rti_status_db)
     result = service.get_rti_status_list(page=1, page_size=10)
 
-    assert result.pagination.totalItem == 3
+    assert result.pagination.total_items == 3
 
 
 def test_get_rti_status_list_pagination_total_pages(rti_status_db):
     service = RTIStatusService(session=rti_status_db)
     result = service.get_rti_status_list(page=1, page_size=2)
 
-    assert result.pagination.totalPages == 2
+    assert result.pagination.total_pages == 2
 
 
 def test_get_rti_status_list_pagination_reflects_page_and_size(rti_status_db):
@@ -166,7 +166,7 @@ def test_get_rti_status_list_pagination_reflects_page_and_size(rti_status_db):
     result = service.get_rti_status_list(page=2, page_size=2)
 
     assert result.pagination.page == 2
-    assert result.pagination.pageSize == 2
+    assert result.pagination.page_size == 2
 
 
 def test_get_rti_status_list_page_size_limits_results(rti_status_db):
@@ -212,8 +212,8 @@ def test_get_rti_status_list_empty_db_returns_empty_data():
         result = service.get_rti_status_list()
 
     assert len(result.data) == 0
-    assert result.pagination.totalItem == 0
-    assert result.pagination.totalPages == 0
+    assert result.pagination.total_items == 0
+    assert result.pagination.total_pages == 0
 
 
 def test_get_rti_status_list_raises_internal_on_db_error(monkeypatch, rti_status_db):
