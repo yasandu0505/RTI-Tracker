@@ -36,15 +36,7 @@ class RTIStatusService:
             return RTIStatusResponse.model_validate(rti_status)
 
         except IntegrityError as e:
-            self.session.rollback()
-            # detect unique constraint
-            constraint = e.orig.diag.constraint_name
-
-            if constraint == "rti_statuses_name_key":
-                raise ConflictException("RTI Status name already exists")
-
-            else:
-                raise ConflictException("Duplicate values violates unique constraint")
+            self._handle_integrity_error(e, "creating RTI status")
         except Exception as e:
             self.session.rollback()
             logger.error(f"[RTI STATUS SERVICE] Error creating RTI status: {e}")
@@ -124,15 +116,7 @@ class RTIStatusService:
 
             return RTIStatusResponse.model_validate(result)
         except IntegrityError as e:
-            self.session.rollback()
-            # detect unique constraint
-            constraint = e.orig.diag.constraint_name
-
-            if constraint == "rti_statuses_name_key":
-                raise ConflictException("RTI Status name already exists")
-
-            else:
-                raise ConflictException("Duplicate values violates unique constraint")
+            self._handle_integrity_error(e, "updating RTI status")
         except NotFoundException:
             raise
         except Exception as e:
@@ -171,5 +155,17 @@ class RTIStatusService:
             raise InternalServerException(
                 "[RTI STATUS SERVICE] Failed to delete RTI status"
             ) from e    
+    
+    def _handle_integrity_error(self, e: IntegrityError, operation: str) -> None:
+        self.session.rollback()
+        error_msg = str(e.orig).lower()
         
+        # Check for name uniqueness constraint (covers both Postgres and SQLite)
+        if "rti_statuses_name_key" in error_msg or "unique constraint failed: rti_statuses.name" in error_msg:
+            raise ConflictException("RTI Status name already exists")
+        
+        # Fallback for other integrity errors
+        clean_error = error_msg.replace('\n', ' ').strip()
+        logger.error(f"[RTI STATUS SERVICE] Integrity error during {operation}: {clean_error}")
+        raise ConflictException(f"Database constraint violation: {clean_error}")
 

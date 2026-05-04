@@ -57,6 +57,9 @@ def test_create_rti_status_returns_rti_status_response(rti_status_db, make_rti_s
     assert isinstance(result, RTIStatusResponse)
     assert result.name == "Dispatched"
     assert isinstance(result.id, uuid.UUID)
+    assert result.id is not None
+    assert isinstance(result.created_at, datetime)
+    assert isinstance(result.updated_at, datetime)
 
 
 def test_create_rti_status_persists_to_db(rti_status_db, make_rti_status_request):
@@ -95,16 +98,15 @@ def test_create_rti_status_rolls_back_on_db_error(monkeypatch, rti_status_db, ma
     rollback_mock.assert_called_once()
 
 
-def test_create_rti_status_raises_conflict_on_duplicate_name(monkeypatch, rti_status_db, make_rti_status_request):
+def test_create_rti_status_raises_conflict_on_duplicate_name(rti_status_db, make_rti_status_request):
     service = RTIStatusService(session=rti_status_db)
-    monkeypatch.setattr(
-        rti_status_db, "commit",
-        MagicMock(side_effect=_make_integrity_error("rti_statuses_name_key"))
-    )
+    # Create the first one
+    service.create_rti_status(rti_status_request=make_rti_status_request(name="Duplicate Name"))
 
+    # Try to create another one with the same name
     with pytest.raises(ConflictException) as exc_info:
-        service.create_rti_status(rti_status_request=make_rti_status_request())
-    assert "already exists" in exc_info.value.message
+        service.create_rti_status(rti_status_request=make_rti_status_request(name="Duplicate Name"))
+    assert "already exists" in exc_info.value.message.lower()
 
 
 def test_create_rti_status_rolls_back_on_integrity_error(monkeypatch, rti_status_db, make_rti_status_request):
@@ -181,13 +183,18 @@ def test_get_rti_status_list_second_page_returns_remaining(rti_status_db):
     assert len(result.data) == 1
 
 
-def test_get_rti_status_list_returns_most_recent_first(rti_status_db):
-    """Results are ordered by created_at DESC, so Completed (newest) comes first."""
+def test_get_rti_status_list_returns_most_recent_first(rti_status_db, make_rti_status_request):
+    """Results are ordered by created_at DESC, so a newly created status should be at index 0."""
     service = RTIStatusService(session=rti_status_db)
+    
+    # Create a brand new status
+    new_status_name = "Brand New Status"
+    service.create_rti_status(rti_status_request=make_rti_status_request(name=new_status_name))
+    
     result = service.get_rti_status_list(page=1, page_size=10)
 
-    assert result.data[0].name == "Completed"
-    assert result.data[-1].name == "Pending"
+    # The newest one should be at the top (index 0)
+    assert result.data[0].name == new_status_name
 
 
 def test_get_rti_status_list_out_of_range_page_returns_empty(rti_status_db):
@@ -288,6 +295,10 @@ def test_update_rti_status_put_returns_rti_status_response(rti_status_db):
     )
 
     assert isinstance(result, RTIStatusResponse)
+    assert result.name == "New Name"
+    assert result.id == pending.id
+    assert isinstance(result.created_at, datetime)
+    assert isinstance(result.updated_at, datetime)
 
 
 def test_update_rti_status_put_raises_not_found_for_unknown_id(rti_status_db):
@@ -300,20 +311,20 @@ def test_update_rti_status_put_raises_not_found_for_unknown_id(rti_status_db):
         )
 
 
-def test_update_rti_status_put_raises_conflict_on_duplicate_name(monkeypatch, rti_status_db):
-    pending = rti_status_db.exec(select(RTIStatus).where(RTIStatus.name == "Pending")).first()
-    service = RTIStatusService(session=rti_status_db)
-    monkeypatch.setattr(
-        rti_status_db, "commit",
-        MagicMock(side_effect=_make_integrity_error("rti_statuses_name_key"))
-    )
+def test_update_rti_status_put_raises_conflict_on_duplicate_name(rti_status_db):
+    # Get two existing statuses from the fixture seed
+    statuses = rti_status_db.exec(select(RTIStatus)).all()
+    status_to_update = statuses[0]
+    duplicate_name = statuses[1].name
 
+    service = RTIStatusService(session=rti_status_db)
+    
     with pytest.raises(ConflictException) as exc_info:
         service.update_rti_status_put(
-            rti_status_id=pending.id,
-            rti_status_request=RTIStatusRequest(name="Delivery"),
+            rti_status_id=status_to_update.id,
+            rti_status_request=RTIStatusRequest(name=duplicate_name),
         )
-    assert "already exists" in exc_info.value.message
+    assert "already exists" in exc_info.value.message.lower()
 
 
 def test_update_rti_status_put_rolls_back_on_integrity_error(monkeypatch, rti_status_db):
