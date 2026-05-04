@@ -9,8 +9,13 @@ class InstitutionResponse(BaseModel):
     # attributes
     id: UUID = Field(..., description="Unique identifier for the institution")
     name: str = Field(..., description="Name of the institution")
-    created_at: datetime = Field(..., description="ISO 8601 timestamp of when the institution was created")
-    updated_at: datetime = Field(..., description="ISO 8601 timestamp of when the institution was last updated")
+    created_at: datetime = Field(..., serialization_alias="createdAt", description="ISO 8601 timestamp of when the institution was created")
+    updated_at: datetime = Field(..., serialization_alias="updatedAt", description="ISO 8601 timestamp of when the institution was last updated")
+
+class InstitutionShortResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True, str_strip_whitespace=True)
+    id: UUID = Field(..., description="Unique identifier for the institution")
+    name: str = Field(..., description="Name of the institution")
 
 class InstitutionListResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True, str_strip_whitespace=True)
