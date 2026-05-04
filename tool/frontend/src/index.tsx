@@ -12,6 +12,7 @@ root.render(
     <AsgardeoProvider
         clientId={ASGARDEO_CLIENT_ID}
         baseUrl={ASGARDEO_BASE_URL}
+        scopes={["openid", "profile", "groups"]}
     >
         <App />
     </AsgardeoProvider>
