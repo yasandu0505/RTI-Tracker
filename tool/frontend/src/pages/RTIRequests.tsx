@@ -1,7 +1,7 @@
 import { useState, Fragment, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { ChevronLeft, FileText, ArrowRight, Save, Send, User } from 'lucide-react';
+import { ChevronLeft, FileText, ArrowRight, Save, Send, User, Upload } from 'lucide-react';
 import { generateRTIPDF, downloadBlob } from '../utils/pdfUtils';
 import { Button } from '../components/Button';
 import { DataTable } from '../components/DataTable';
@@ -52,7 +52,9 @@ export function RTIRequests() {
   const [step, setStep] = useState(1);
   const editorRef = useRef<SmartEditorRef>(null);
   const [showErrors, setShowErrors] = useState(false);
-  const [selectionMode, setSelectionMode] = useState<'none' | 'template'>('none');
+  const [selectionMode, setSelectionMode] = useState<'none' | 'template' | 'upload'>('none');
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     templateId: '',
     title: '',
@@ -67,7 +69,7 @@ export function RTIRequests() {
 
   const openCreate = () => {
     setStep(1);
-    setSelectionMode('none');
+    setUploadedFile(null);
     setFormData({
       templateId: '',
       title: '',
@@ -77,7 +79,22 @@ export function RTIRequests() {
       content: '',
       requestDate: new Date().toISOString().split('T')[0]
     });
+    setSelectionMode('none');
     setView('create');
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.type !== 'application/pdf') {
+        toast.error('Please upload a PDF file');
+        return;
+      }
+      setUploadedFile(file);
+      setFormData(prev => ({ ...prev, title: file.name.replace(/\.pdf$/i, '') }));
+      setSelectionMode('upload');
+      setStep(2);
+    }
   };
 
   const confirmDelete = async () => {
@@ -96,12 +113,14 @@ export function RTIRequests() {
     if (!templateId) {
       setFormData(prev => ({ ...prev, templateId: '', content: '', title: '' }));
       setStep(2);
+      setSelectionMode('none');
       return;
     }
 
     try {
       const content = await templateService.getTemplateContent(fileLink!);
       setFormData(prev => ({ ...prev, templateId, content: content || '', title: title || '' }));
+      setSelectionMode('template');
       setStep(2);
     } catch (e) {
       toast.error('Failed to load template content');
@@ -110,23 +129,28 @@ export function RTIRequests() {
 
   const handleSave = async (isDispatch: boolean) => {
     const rawContent = editorRef.current?.getMarkdown() || formData.content;
-
-    // 1. Generate PDF and final content
     const sender = senders.find((s: Sender) => s.id === formData.senderId);
     const receiver = receivers.find((r: Receiver) => r.id === formData.receiverId);
 
     try {
-      const { blob, fileName, finalMarkdown } = await generateRTIPDF({
-        title: formData.title,
-        requestDate: formData.requestDate,
-        sender,
-        receiver,
-        content: rawContent
-      });
+      let pdfFile: File;
+      let finalMarkdown = formData.content;
 
-      const pdfFile = new File([blob], fileName, { type: 'application/pdf' });
-
-      downloadBlob(blob, fileName);
+      if (selectionMode === 'upload' && uploadedFile) {
+        pdfFile = uploadedFile;
+        finalMarkdown = 'File uploaded manually';
+      } else {
+        const { blob, fileName, finalMarkdown: generatedMarkdown } = await generateRTIPDF({
+          title: formData.title,
+          requestDate: formData.requestDate,
+          sender,
+          receiver,
+          content: rawContent
+        });
+        pdfFile = new File([blob], fileName, { type: 'application/pdf' });
+        finalMarkdown = generatedMarkdown;
+        downloadBlob(blob, fileName);
+      }
 
       // Save to backend
       await createRTIRequest({
@@ -139,11 +163,11 @@ export function RTIRequests() {
         file: pdfFile,
       });
 
-      toast.success(`RTI request ${isDispatch ? 'dispatched' : 'saved'} and PDF downloaded`);
+      toast.success(`RTI request ${isDispatch ? 'dispatched' : 'saved'} successfully`);
       setView('list');
     } catch (e) {
-      console.error('PDF Generation Error:', e);
-      toast.error('Failed to generate or save RTI request');
+      console.error('Save Error:', e);
+      toast.error('Failed to save RTI request');
     }
   };
 
@@ -207,22 +231,31 @@ export function RTIRequests() {
           {step === 1 && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
               {selectionMode === 'none' ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto pt-8">
-                  <div className="group bg-white border-2 border-dashed border-gray-200 rounded-3xl p-10 flex flex-col items-center text-center hover:border-blue-900 hover:bg-blue-50/30 transition-all duration-300 cursor-pointer shadow-sm hover:shadow-xl" onClick={() => handleTemplateSelect()}>
-                    <div className="bg-blue-100 w-20 h-20 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-blue-900 group-hover:text-white transition-all duration-300 transform group-hover:scale-110">
-                      <Save className="w-10 h-10 text-blue-900 group-hover:text-white" />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto pt-8">
+                  <div className="group bg-white border-2 border-dashed border-gray-200 rounded-3xl p-8 flex flex-col items-center text-center hover:border-blue-900 hover:bg-blue-50/30 transition-all duration-300 cursor-pointer shadow-sm hover:shadow-xl" onClick={() => handleTemplateSelect()}>
+                    <div className="bg-blue-100 w-16 h-16 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-blue-900 group-hover:text-white transition-all duration-300 transform group-hover:scale-110">
+                      <Save className="w-8 h-8 text-blue-900 group-hover:text-white" />
                     </div>
-                    <h3 className="text-2xl font-bold text-gray-900 mb-3">New Document</h3>
-                    <p className="text-gray-600 mb-8">Begin with a clean document</p>
-                    <Button variant="outline" className="px-8">Create Custom</Button>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">New Document</h3>
+                    <p className="text-sm text-gray-600 mb-6">Begin with a clean document</p>
+                    <Button variant="outline" size="sm" className="px-6">Create Custom</Button>
                   </div>
-                  <div className="group bg-white border-2 border-gray-200 rounded-3xl p-10 flex flex-col items-center text-center hover:border-blue-900 hover:shadow-xl transition-all duration-300 cursor-pointer shadow-sm" onClick={() => setSelectionMode('template')}>
-                    <div className="bg-blue-900/10 w-20 h-20 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-blue-900 group-hover:text-white transition-all duration-300 transform group-hover:scale-110">
-                      <FileText className="w-10 h-10 text-blue-900 group-hover:text-white" />
+                  <div className="group bg-white border-2 border-gray-200 rounded-3xl p-8 flex flex-col items-center text-center hover:border-blue-900 hover:shadow-xl transition-all duration-300 cursor-pointer shadow-sm" onClick={() => setSelectionMode('template')}>
+                    <div className="bg-blue-900/10 w-16 h-16 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-blue-900 group-hover:text-white transition-all duration-300 transform group-hover:scale-110">
+                      <FileText className="w-8 h-8 text-blue-900 group-hover:text-white" />
                     </div>
-                    <h3 className="text-2xl font-bold text-gray-900 mb-3">Use a Template</h3>
-                    <p className="text-gray-600 mb-8">Choose from the library of templates</p>
-                    <Button className="bg-blue-900 hover:bg-blue-800 px-8">Browse Templates</Button>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">Use a Template</h3>
+                    <p className="text-sm text-gray-600 mb-6">Choose from the library</p>
+                    <Button variant="secondary" size="sm" className="px-6">Browse Templates</Button>
+                  </div>
+                  <div className="group bg-white border-2 border-gray-200 rounded-3xl p-8 flex flex-col items-center text-center hover:border-blue-900 hover:shadow-xl transition-all duration-300 cursor-pointer shadow-sm" onClick={() => fileInputRef.current?.click()}>
+                    <div className="bg-green-100 w-16 h-16 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-green-600 group-hover:text-white transition-all duration-300 transform group-hover:scale-110">
+                      <Upload className="w-8 h-8 text-green-700 group-hover:text-white" />
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">Upload File</h3>
+                    <p className="text-sm text-gray-600 mb-6">Upload a PDF from device</p>
+                    <Button variant="outline" size="sm" className="px-6 border-green-600 text-green-700 hover:bg-green-600 hover:text-white">Select PDF</Button>
+                    <input type="file" ref={fileInputRef} className="hidden" accept=".pdf" onChange={handleFileChange} />
                   </div>
                 </div>
               ) : (
@@ -309,19 +342,32 @@ export function RTIRequests() {
                   <h2 className="text-xl font-bold text-gray-900">Step 3: Document Finalization</h2>
                 </div>
               </div>
-              <div className="h-[650px]">
-                <div className="flex flex-col bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden border-t-4 border-t-blue-900 h-full">
-                  <div className="bg-gray-50 border-b border-gray-200 px-6 py-2 flex items-center justify-between">
-                    <h6 className="text-md font-bold text-gray-900">{formData.title || 'Untitled Request'}</h6>
+              {selectionMode === 'upload' ? (
+                <div className="bg-white border border-gray-200 rounded-3xl p-12 flex flex-col items-center justify-center text-center space-y-6 shadow-sm border-t-4 border-t-green-600 min-h-[400px]">
+                  <div className="bg-green-100 w-24 h-24 rounded-full flex items-center justify-center mb-2">
+                    <FileText className="w-12 h-12 text-green-700" />
                   </div>
-                  <SmartEditor ref={editorRef} initialMarkdown={formData.content} placeholders={placeholders} className="flex-1" onChange={(markdown) => setFormData(prev => ({ ...prev, content: markdown }))} />
+                  <div>
+                    <h3 className="text-2xl font-bold text-gray-900">{uploadedFile?.name}</h3>
+                    <p className="text-gray-500 mt-2">Manual file upload selected. No content editing available.</p>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => { setSelectionMode('none'); setUploadedFile(null); setStep(1); }}>Change File</Button>
                 </div>
-              </div>
+              ) : (
+                <div className="h-[650px]">
+                  <div className="flex flex-col bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden border-t-4 border-t-blue-900 h-full">
+                    <div className="bg-gray-50 border-b border-gray-200 px-6 py-2 flex items-center justify-between">
+                      <h6 className="text-md font-bold text-gray-900">{formData.title || 'Untitled Request'}</h6>
+                    </div>
+                    <SmartEditor ref={editorRef} initialMarkdown={formData.content} placeholders={placeholders} className="flex-1" onChange={(markdown) => setFormData(prev => ({ ...prev, content: markdown }))} />
+                  </div>
+                </div>
+              )}
               <div className="flex justify-between items-center pt-4">
                 <Button variant="secondary" onClick={() => setStep(2)} className="flex items-center gap-2"><ChevronLeft className="w-4 h-4" /> Back</Button>
                 <div className="flex gap-4">
                   <Button onClick={() => handleSave(true)} disabled={isCreating} className="flex items-center gap-2 bg-blue-900 shadow-lg">
-                    {isCreating ? 'Processing...' : <><Send className="w-4 h-4" /> Dispatch & Download</>}
+                    {isCreating ? 'Processing...' : <><Send className="w-4 h-4" /> {selectionMode === 'upload' ? "Submit" : "Dispatch & Download"}</>}
                   </Button>
                 </div>
               </div>
