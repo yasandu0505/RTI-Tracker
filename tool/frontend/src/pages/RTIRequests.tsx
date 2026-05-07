@@ -17,7 +17,6 @@ import { Column } from '../types/table';
 import { sendersService } from '../services/sendersService';
 import { getVariableValues } from '../utils/variableUtils';
 
-
 import { useRTIRequest } from '../hooks/useRTIRequest';
 import { useEntityData } from '../hooks/useEntityData';
 import { useTemplates } from '../hooks/useTemplates';
