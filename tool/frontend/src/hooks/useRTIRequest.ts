@@ -2,12 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAsgardeo } from '@asgardeo/react';
 import { rtiRequestsService } from '../services/rtiRequestsService';
 
-export function useRTIRequestList(
-  page: number = 1,
-  pageSize: number = 10,
-  search?: string,
-  onPageChange?: (page: number) => void
-) {
+export function useRTIRequest(page: number = 1, pageSize: number = 10, search?: string, onPageChange?: (page: number) => void) {
   const { http, isSignedIn } = useAsgardeo();
   const queryClient = useQueryClient();
 
@@ -15,6 +10,14 @@ export function useRTIRequestList(
     queryKey: ['rti-requests', page, pageSize, search],
     queryFn: () => rtiRequestsService.list(page, pageSize, search, http),
     enabled: !!isSignedIn,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (payload: { title?: string, description?: string | null, senderId?: string, receiverId?: string, rtiTemplateId?: string, content?: string, file?: File }) =>
+      rtiRequestsService.create(payload, http),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['rti-requests'] });
+    },
   });
 
   const deleteMutation = useMutation({
@@ -31,6 +34,8 @@ export function useRTIRequestList(
     ...query,
     data: query.data?.data || [],
     pagination: query.data?.pagination || { page: 1, pageSize: 10, totalPages: 1, totalItems: 0 },
+    createRTIRequest: createMutation.mutateAsync,
+    isCreating: createMutation.isPending,
     confirmDelete: deleteMutation.mutateAsync,
     isDeleting: deleteMutation.isPending,
   };

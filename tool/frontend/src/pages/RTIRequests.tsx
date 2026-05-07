@@ -1,4 +1,4 @@
-import { useState, Fragment, useRef, useMemo, useEffect } from 'react';
+import { useState, Fragment, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { ChevronLeft, FileText, ArrowRight, Save, Send, User } from 'lucide-react';
@@ -10,17 +10,17 @@ import { Input } from '../components/Input';
 import { SearchableSelect } from '../components/SearchableSelect';
 import { SmartEditor, SmartEditorRef } from '../components/SmartEditor';
 import { FieldError } from '../components/FieldError';
-import { rtiRequestsService } from '../services/rtiRequestsService';
 import { templateService } from '../services/templateService';
 import { receiversService } from '../services/receiversService';
 import { RTIRequest, Sender, Receiver } from '../types/db';
-import { Template } from '../types/rti';
 import { Column } from '../types/table';
 import { sendersService } from '../services/sendersService';
 import { getVariableValues } from '../utils/variableUtils';
 
 
-import { useRTIRequestList } from '../hooks/useRTIRequest';
+import { useRTIRequest } from '../hooks/useRTIRequest';
+import { useEntityData } from '../hooks/useEntityData';
+import { useTemplates } from '../hooks/useTemplates';
 
 type View = 'list' | 'create';
 
@@ -30,25 +30,29 @@ export function RTIRequests() {
   const [search, setSearch] = useState('');
   const [pageParams, setPageParams] = useState({ page: 1, pageSize: 10 });
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [receiverSearch, setReceiverSearch] = useState('');
 
-  const rtiRequestsHook = useRTIRequestList(
-    pageParams.page,
-    pageParams.pageSize,
-    search,
-    (p) => setPageParams(prev => ({ ...prev, page: p }))
-  );
-  const rows = rtiRequestsHook.data;
-  const pagination = rtiRequestsHook.pagination;
+  const {
+    data: rows,
+    pagination,
+    createRTIRequest,
+    isCreating,
+    confirmDelete: confirmDeleteRTI,
+    isDeleting,
+    isLoading: isLoadingRequests,
+    isFetching: isFetchingRequests
+  } = useRTIRequest(pageParams.page, pageParams.pageSize, search);
+
+  const { data: senders } = useEntityData<Sender>('senders', { list: sendersService.listSenders }, 1, 100);
+  const { data: receivers } = useEntityData<Receiver>('receivers', { list: receiversService.listReceivers }, 1, 6, receiverSearch);
+  const { data: templatesData } = useTemplates(1, 100);
+  const templates = templatesData?.data || [];
 
   // Creation Flow State
   const [step, setStep] = useState(1);
   const editorRef = useRef<SmartEditorRef>(null);
-  const [senders, setSenders] = useState<Sender[]>([]);
-  const [receivers, setReceivers] = useState<Receiver[]>([]);
-  const [templates, setTemplates] = useState<Template[]>([]);
   const [showErrors, setShowErrors] = useState(false);
   const [selectionMode, setSelectionMode] = useState<'none' | 'template'>('none');
-  const [receiverSearch, setReceiverSearch] = useState('');
   const [formData, setFormData] = useState({
     templateId: '',
     title: '',
@@ -59,40 +63,7 @@ export function RTIRequests() {
     requestDate: new Date().toISOString().split('T')[0]
   });
 
-  const loadLookups = async () => {
-    try {
-      const [s, r, t] = await Promise.all([
-        sendersService.listSenders(1, 100),
-        receiversService.listReceivers(1, 6),
-        templateService.getRTITemplates(1, 100)
-      ]);
-      setSenders(s.data);
-      setReceivers(r.data);
-      setTemplates(t.data);
-    } catch (e) {
-      toast.error('Failed to load form data');
-    }
-  };
-
-  useEffect(() => {
-    if (view === 'create') {
-      loadLookups();
-    }
-  }, [view]);
-
-  useEffect(() => {
-    if (view === 'create') {
-      const delayFn = setTimeout(async () => {
-        try {
-          const res = await receiversService.listReceivers(1, 6, receiverSearch);
-          setReceivers(res.data);
-        } catch (e) {
-          // ignore
-        }
-      }, 300);
-      return () => clearTimeout(delayFn);
-    }
-  }, [receiverSearch, view]);
+  // Lookups are now managed by hooks
 
   const openCreate = () => {
     setStep(1);
@@ -112,7 +83,7 @@ export function RTIRequests() {
   const confirmDelete = async () => {
     if (!deleteId) return;
     try {
-      await rtiRequestsHook.confirmDelete(deleteId);
+      await confirmDeleteRTI(deleteId);
       toast.success('RTI request deleted');
     } catch (e) {
       toast.error('Failed to delete');
@@ -141,8 +112,8 @@ export function RTIRequests() {
     const rawContent = editorRef.current?.getMarkdown() || formData.content;
 
     // 1. Generate PDF and final content
-    const sender = senders.find(s => s.id === formData.senderId);
-    const receiver = receivers.find(r => r.id === formData.receiverId);
+    const sender = senders.find((s: Sender) => s.id === formData.senderId);
+    const receiver = receivers.find((r: Receiver) => r.id === formData.receiverId);
 
     try {
       const { blob, fileName, finalMarkdown } = await generateRTIPDF({
@@ -158,7 +129,7 @@ export function RTIRequests() {
       downloadBlob(blob, fileName);
 
       // Save to backend
-      await rtiRequestsService.create({
+      await createRTIRequest({
         title: formData.title,
         description: formData.description,
         senderId: formData.senderId,
@@ -170,7 +141,6 @@ export function RTIRequests() {
 
       toast.success(`RTI request ${isDispatch ? 'dispatched' : 'saved'} and PDF downloaded`);
       setView('list');
-      rtiRequestsHook.refetch();
     } catch (e) {
       console.error('PDF Generation Error:', e);
       toast.error('Failed to generate or save RTI request');
@@ -307,12 +277,12 @@ export function RTIRequests() {
                   </div>
                   <div className="flex flex-col space-y-1">
                     <label className="text-sm font-medium text-gray-700">Sender (Applicant)</label>
-                    <SearchableSelect placeholder="Search for a sender..." options={senders.map(s => ({ id: s.id, name: s.name }))} value={formData.senderId} onChange={(id) => setFormData({ ...formData, senderId: id })} />
+                    <SearchableSelect placeholder="Search for a sender..." options={senders.map((s: Sender) => ({ id: s.id, name: s.name }))} value={formData.senderId} onChange={(id) => setFormData({ ...formData, senderId: id })} />
                     {showErrors && !formData.senderId && <FieldError error="Please select a sender" />}
                   </div>
                   <div className="flex flex-col space-y-1">
                     <label className="text-sm font-medium text-gray-700">Receiver (Institution - Position)</label>
-                    <SearchableSelect placeholder="Search for a receiver..." options={receivers.map(r => ({ id: r.id, name: `${r.institution?.name} - ${r.position?.name}` }))} value={formData.receiverId} onChange={(id) => setFormData({ ...formData, receiverId: id })} onSearchChange={setReceiverSearch} />
+                    <SearchableSelect placeholder="Search for a receiver..." options={receivers.map((r: Receiver) => ({ id: r.id, name: `${r.institution?.name} - ${r.position?.name}` }))} value={formData.receiverId} onChange={(id) => setFormData({ ...formData, receiverId: id })} onSearchChange={setReceiverSearch} />
                     {showErrors && !formData.receiverId && <FieldError error="Please select a receiver" />}
                   </div>
                 </div>
@@ -350,7 +320,9 @@ export function RTIRequests() {
               <div className="flex justify-between items-center pt-4">
                 <Button variant="secondary" onClick={() => setStep(2)} className="flex items-center gap-2"><ChevronLeft className="w-4 h-4" /> Back</Button>
                 <div className="flex gap-4">
-                  <Button onClick={() => handleSave(true)} className="flex items-center gap-2 bg-blue-900 shadow-lg"><Send className="w-4 h-4" /> Dispatch & Download</Button>
+                  <Button onClick={() => handleSave(true)} disabled={isCreating} className="flex items-center gap-2 bg-blue-900 shadow-lg">
+                    {isCreating ? 'Processing...' : <><Send className="w-4 h-4" /> Dispatch & Download</>}
+                  </Button>
                 </div>
               </div>
             </div>
@@ -377,7 +349,7 @@ export function RTIRequests() {
           onSearch={setSearch}
           data={rows}
           columns={columns}
-          loading={rtiRequestsHook.isLoading || rtiRequestsHook.isFetching || rtiRequestsHook.isDeleting}
+          loading={isLoadingRequests || isFetchingRequests || isDeleting}
           pagination={pagination}
           onPageChange={(p) => setPageParams(prev => ({ ...prev, page: p }))}
           onPageSizeChange={(size) => setPageParams(prev => ({ ...prev, page: 1, pageSize: size }))}
@@ -392,7 +364,7 @@ export function RTIRequests() {
         message="Are you sure you want to delete this RTI request? This action cannot be undone."
         onCancel={() => setDeleteId(null)}
         onConfirm={confirmDelete}
-        confirmText={rtiRequestsHook.isDeleting ? "Deleting..." : "Delete"}
+        confirmText={isDeleting ? "Deleting..." : "Delete"}
       />
     </div>
   );
