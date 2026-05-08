@@ -1,20 +1,36 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, FileText, CheckCircle, Upload, Clock, User, Building2, Mail, X, Plus, Edit2, AlertTriangle } from 'lucide-react';
-import { rtiRequestsService } from '../services/rtiRequestsService';
-import { statusService } from '../services/statusService';
-import { RTIRequest, RTIStatusHistory, RTIStatus } from '../types/db';
+import { useRTIRequestDetail } from '../hooks/useRTIRequest';
+import { useRtiRequestHistories, useCreateRtiRequestHistory, useUpdateRtiRequestHistory, useDeleteRtiRequestHistory } from '../hooks/useRtiRequestHistory';
+import { useStatuses } from '../hooks/useStatuses';
+import { RTIStatusHistory, RTIStatus } from '../types/db';
 import { Button } from '../components/Button';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import toast from 'react-hot-toast';
 
+const FILE_VIEW_BASE_URL = import.meta.env.VITE_FILE_VIEW_BASE_URL || '';
+
 export function RTIDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [request, setRequest] = useState<RTIRequest | null>(null);
-  const [history, setHistory] = useState<RTIStatusHistory[]>([]);
-  const [statuses, setStatuses] = useState<RTIStatus[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+
+  // TanStack Hooks
+  const { data: request, isLoading: isRequestLoading, error: requestError } = useRTIRequestDetail(id || '');
+  const { data: historyResponse, isLoading: isHistoryLoading } = useRtiRequestHistories(id || '');
+
+  const { data: statusesResponse, isLoading: isStatusesLoading } = useStatuses();
+  const statuses: RTIStatus[] = statusesResponse?.data || [];
+
+  const createHistoryMutation = useCreateRtiRequestHistory();
+  const updateHistoryMutation = useUpdateRtiRequestHistory();
+  const deleteHistoryMutation = useDeleteRtiRequestHistory();
+
+  const history = useMemo(() => {
+    return [...(historyResponse?.data || [])].sort(
+      (a, b) => new Date(b.entryTime).getTime() - new Date(a.entryTime).getTime()
+    );
+  }, [historyResponse?.data]);
 
   // Event Modal State
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
@@ -23,43 +39,48 @@ export function RTIDetail() {
   const [eventFormData, setEventFormData] = useState({
     statusId: '',
     direction: 'sent' as 'sent' | 'received',
+    entryTime: '',
+    exitTime: '',
     description: '',
     existingFiles: [] as string[],
     newFiles: [] as File[]
   });
 
+  // Helper function to format date for datetime-local input
+  const formatForInput = (date: Date | string | null | undefined) => {
+    if (!date) return '';
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return '';
+
+    const pad = (num: number) => num.toString().padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  };
+
   // Delete Confirmation State
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
+
   useEffect(() => {
-    const fetchAllData = async () => {
-      if (!id) return;
-      setIsLoading(true);
-      try {
-        const [reqData, historyData, statusData] = await Promise.all([
-          rtiRequestsService.details(id),
-          rtiRequestsService.getHistory(id),
-          statusService.getAll()
-        ]);
-        setRequest(reqData);
-        setHistory(historyData.sort((a, b) => new Date(b.entryTime).getTime() - new Date(a.entryTime).getTime()));
-        setStatuses(statusData);
-      } catch (e) {
-        toast.error('Failed to load RTI details');
-        navigate('/rti-requests');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchAllData();
-  }, [id, navigate]);
+    if (requestError) {
+      toast.error('Failed to load RTI details');
+      navigate('/rti-requests');
+    }
+  }, [requestError, navigate]);
 
 
 
   const handleAddEvent = () => {
     setIsEditing(false);
     setSelectedEntry(null);
-    setEventFormData({ statusId: '', direction: 'sent', description: '', existingFiles: [], newFiles: [] });
+    setEventFormData({
+      statusId: '',
+      direction: 'sent',
+      entryTime: formatForInput(new Date()),
+      exitTime: '',
+      description: '',
+      existingFiles: [],
+      newFiles: []
+    });
     setIsEventModalOpen(true);
   };
 
@@ -67,8 +88,10 @@ export function RTIDetail() {
     setIsEditing(true);
     setSelectedEntry(entry);
     setEventFormData({
-      statusId: entry.status.id,
+      statusId: entry.rtiStatus.id,
       direction: entry.direction as any,
+      entryTime: formatForInput(entry.entryTime),
+      exitTime: formatForInput(entry.exitTime),
       description: entry.description || '',
       existingFiles: entry.files,
       newFiles: []
@@ -83,42 +106,45 @@ export function RTIDetail() {
     // Validation: Require at least one document except for COMPLETED
     // const totalFiles = eventFormData.existingFiles.length + eventFormData.newFiles.length;
     const selectedStatusToSave = statuses.find(s => s.id === eventFormData.statusId);
-    // if (selectedStatusToSave?.name !== 'COMPLETED' && totalFiles === 0) {
-    //   toast.error('At least one document is required for this status');
-    //   return;
-    // }
+    if (!selectedStatusToSave) {
+      toast.error('Please select a status');
+      return;
+    }
 
     try {
       if (isEditing && selectedEntry) {
         const filesToDelete = selectedEntry.files.filter(f => !eventFormData.existingFiles.includes(f));
 
-        const updated = await rtiRequestsService.updateHistory(selectedEntry.id, {
-          statusId: selectedStatusToSave!.id,
-          direction: eventFormData.direction,
-          description: eventFormData.description,
-          filesToAdd: eventFormData.newFiles,
-          filesToDelete: filesToDelete
+        await updateHistoryMutation.mutateAsync({
+          rtiRequestId: id,
+          historyId: selectedEntry.id,
+          payload: {
+            statusId: selectedStatusToSave.id,
+            direction: eventFormData.direction,
+            entryTime: eventFormData.entryTime ? new Date(eventFormData.entryTime) : undefined,
+            exitTime: eventFormData.exitTime ? new Date(eventFormData.exitTime) : undefined,
+            description: eventFormData.description,
+            filesToAdd: eventFormData.newFiles,
+            filesToDelete: filesToDelete
+          }
         });
-        setHistory(prev => prev.map(h => h.id === selectedEntry.id ? updated : h));
-        setRequest(prev => prev ? { ...prev, updatedAt: new Date() } : null);
         toast.success('Event updated');
       } else {
-        await rtiRequestsService.addHistory({
+        await createHistoryMutation.mutateAsync({
           rtiRequestId: id,
-          statusId: selectedStatusToSave!.id,
-          direction: eventFormData.direction,
-          description: eventFormData.description,
-          files: eventFormData.newFiles
+          payload: {
+            statusId: selectedStatusToSave.id,
+            direction: eventFormData.direction,
+            entryTime: eventFormData.entryTime ? new Date(eventFormData.entryTime) : undefined,
+            exitTime: eventFormData.exitTime ? new Date(eventFormData.exitTime) : undefined,
+            description: eventFormData.description,
+            files: eventFormData.newFiles
+          }
         });
-        // Re-fetch full history so previous entry's exitTime is reflected
-        const updatedHistory = await rtiRequestsService.getHistory(id);
-        setHistory(updatedHistory.sort((a, b) => new Date(b.entryTime).getTime() - new Date(a.entryTime).getTime()));
-        setRequest(prev => prev ? { ...prev, updatedAt: new Date() } : null);
         toast.success('Event added');
       }
       setIsEventModalOpen(false);
     } catch (e) {
-      toast.error('Failed to save event');
     }
   };
 
@@ -127,44 +153,41 @@ export function RTIDetail() {
   };
 
   const confirmDeleteEntry = async () => {
-    if (!selectedEntry) return;
+    if (!selectedEntry || !id) return;
 
     try {
-      await rtiRequestsService.deleteHistory(selectedEntry.id);
-      setHistory(prev => prev.filter(h => h.id !== selectedEntry.id));
-      setRequest(prev => prev ? { ...prev, updatedAt: new Date() } : null);
+      await deleteHistoryMutation.mutateAsync({
+        rtiRequestId: id,
+        historyId: selectedEntry.id
+      });
       toast.success('Event deleted');
       setIsDeleteConfirmOpen(false);
       setIsEventModalOpen(false);
     } catch (e) {
-      toast.error('Failed to delete event');
     }
   };
 
   const completedStatus = statuses.find(s => s.name.toLowerCase() === 'completed');
-  const isCompleted = completedStatus && history.some(h => h.status.id === completedStatus.id);
+  const isCompleted = completedStatus && history.some(h => h.rtiStatus.id === completedStatus.id);
 
   const handleMarkCompleted = async () => {
     if (!id || !completedStatus) return;
     try {
-      await rtiRequestsService.addHistory({
+      await createHistoryMutation.mutateAsync({
         rtiRequestId: id,
-        statusId: completedStatus.id,
-        direction: 'received',
-        description: 'Request marked as completed.',
-        files: []
+        payload: {
+          statusId: completedStatus.id,
+          direction: 'received',
+          description: 'Request marked as completed.',
+          files: []
+        }
       });
-      // Re-fetch full history so previous entry's exitTime is reflected
-      const updatedHistory = await rtiRequestsService.getHistory(id);
-      setHistory(updatedHistory.sort((a, b) => new Date(b.entryTime).getTime() - new Date(a.entryTime).getTime()));
-      setRequest(prev => prev ? { ...prev, updatedAt: new Date() } : null);
       toast.success('Marked as Completed');
     } catch (e) {
-      toast.error('Failed to mark as completed');
     }
   };
 
-  if (isLoading || !request) {
+  if (isRequestLoading || isHistoryLoading || isStatusesLoading || !request) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-900"></div>
@@ -205,10 +228,7 @@ export function RTIDetail() {
               <div className="flex flex-wrap items-center gap-y-2 gap-x-6 text-sm text-gray-500">
                 <div className="flex items-center gap-1.5">
                   <Clock className="w-4 h-4" />
-                  Last Updated: {new Date(request.updatedAt).toLocaleString(undefined, { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                </div>
-                <div className="flex items-center gap-1.5 font-mono text-xs">
-                  Ref: {request?.referenceId || request?.id.split('-')[1]?.toUpperCase() || 'N/A'}
+                  Last Updated: {new Date(request.updatedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'numeric', day: 'numeric' })}
                 </div>
               </div>
             </div>
@@ -275,9 +295,16 @@ export function RTIDetail() {
                   <div className="flex items-start gap-3">
                     <FileText className="w-4 h-4 text-gray-400 mt-0.5" />
                     <div>
-                      <p className="text-sm font-bold text-gray-900">{request?.template?.title || 'Custom Request'}</p>
-                      {request?.template?.file && (
-                        <p className="text-[10px] text-gray-400 font-mono break-all mt-1">{request?.template?.file}</p>
+                      <p className="text-sm font-bold text-gray-900">{request?.rtiTemplate?.title || 'Custom Request'}</p>
+                      {request?.rtiTemplate?.file && (
+                        <a
+                          href={`${FILE_VIEW_BASE_URL}${request.rtiTemplate.file}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[10px] text-blue-600 hover:text-blue-800 font-bold mt-1 inline-block underline decoration-blue-200 underline-offset-2 transition-colors"
+                        >
+                          See Template
+                        </a>
                       )}
                     </div>
                   </div>
@@ -320,8 +347,8 @@ export function RTIDetail() {
                           <div className="flex flex-wrap items-center justify-between gap-2">
                             <div className="flex items-center gap-2">
                               <h4 className="text-sm font-bold">
-                                {h.status ? (
-                                  <span className="text-gray-900">{h.status.name}</span>
+                                {h.rtiStatus ? (
+                                  <span className="text-gray-900">{h.rtiStatus.name}</span>
                                 ) : (
                                   <span className="flex items-center gap-1.5 text-gray-400 italic text-sm font-medium">
                                     <AlertTriangle className="w-3.5 h-3.5 text-gray-400" />
@@ -329,7 +356,7 @@ export function RTIDetail() {
                                   </span>
                                 )}
                               </h4>
-                              {idx === 0 && statuses.find(s => s.id === h.status.id)?.name !== 'CREATED' && (
+                              {idx === 0 && h.rtiStatus?.name !== 'CREATED' && (
                                 <button
                                   onClick={() => handleEditEvent(h)}
                                   className="p-1 text-gray-400 hover:text-blue-900 transition-colors"
@@ -340,12 +367,14 @@ export function RTIDetail() {
                               )}
                             </div>
                             <div className="flex flex-col items-end gap-0.5">
-                              <span className="text-[10px] font-medium text-gray-400">Start: {new Date(h.entryTime).toLocaleString(undefined, { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                              <span className="text-[10px] font-medium text-gray-400">Start: {new Date(h.entryTime).toLocaleDateString(undefined, { year: 'numeric', month: 'numeric', day: 'numeric' })}</span>
                               {h.exitTime ? (
-                                <span className="text-[10px] font-medium text-gray-400">End: {new Date(h.exitTime).toLocaleString(undefined, { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
-                              ) : (
+                                <span className="text-[10px] font-medium text-gray-400">End: {new Date(h.exitTime).toLocaleDateString(undefined, { year: 'numeric', month: 'numeric', day: 'numeric' })}</span>
+                              ) : idx === 0 ? (
                                 <span className="text-[10px] font-medium text-blue-400 italic">Active</span>
-                              )}
+                              ) : h.rtiStatus?.name !== 'CREATED' ? (
+                                <span className="text-[10px] font-medium text-gray-400">End: -</span>
+                              ) : null}
                             </div>
                           </div>
 
@@ -362,23 +391,18 @@ export function RTIDetail() {
                               <h5 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Attachments</h5>
                               <div className="flex flex-wrap gap-2">
                                 {h.files.map((file, fIdx) => (
-                                  <div
+                                  <a
                                     key={fIdx}
-                                    className="flex items-center gap-1.5 px-2 py-1 bg-white border border-gray-200 text-gray-700 rounded-lg shadow-sm hover:border-blue-300 hover:bg-blue-50/50 transition-all group"
+                                    href={file.startsWith('http') ? file : `${FILE_VIEW_BASE_URL}${file}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-1.5 px-2 py-1 bg-white border border-gray-200 text-gray-700 rounded-lg shadow-sm hover:border-blue-300 hover:bg-blue-50/50 transition-all group cursor-pointer"
                                   >
-                                    <button
-                                      onClick={() => {
-                                        const fileUrl = file.startsWith('http') ? file : `${import.meta.env.VITE_FILE_STORAGE_BASE_URL}/${file}`;
-                                        window.open(fileUrl, '_blank', 'noopener,noreferrer');
-                                      }}
-                                      className="flex items-center gap-1.5 hover:text-blue-900"
-                                    >
-                                      <FileText className="w-3 h-3 text-blue-900" />
-                                      <span className="text-[10px] font-bold">
-                                        {file.split('/').pop() || `File ${fIdx + 1}`}
-                                      </span>
-                                    </button>
-                                  </div>
+                                    <FileText className="w-3 h-3 text-blue-900" />
+                                    <span className="text-[10px] font-bold">
+                                      {`File ${fIdx + 1}`}
+                                    </span>
+                                  </a>
                                 ))}
                               </div>
                             </div>
@@ -397,12 +421,12 @@ export function RTIDetail() {
       {/* Add/Edit Event Modal */}
       {isEventModalOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50 flex-shrink-0">
               <h3 className="text-lg font-bold text-gray-900">{isEditing ? 'Edit Latest Event' : 'Add New Timeline Event'}</h3>
               <button onClick={() => setIsEventModalOpen(false)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
             </div>
-            <form onSubmit={handleEventSubmit} className="p-6 space-y-5">
+            <form onSubmit={handleEventSubmit} className="p-6 space-y-5 overflow-y-auto flex-1 custom-scrollbar">
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Status</label>
                 <select
@@ -444,6 +468,28 @@ export function RTIDetail() {
                 </div>
               </div>
 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Start Time</label>
+                  <input
+                    type="date"
+                    required
+                    value={eventFormData.entryTime}
+                    onChange={(e) => setEventFormData({ ...eventFormData, entryTime: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-900 transition-colors"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">End Time (Optional)</label>
+                  <input
+                    type="date"
+                    value={eventFormData.exitTime}
+                    onChange={(e) => setEventFormData({ ...eventFormData, exitTime: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-900 transition-colors"
+                  />
+                </div>
+              </div>
+
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Description</label>
                 <textarea
@@ -481,10 +527,10 @@ export function RTIDetail() {
                   {/* Chips for Existing and New Files */}
                   <div className="flex flex-wrap gap-2 pt-1">
                     {/* Existing Files */}
-                    {eventFormData.existingFiles.map((file, i) => (
+                    {eventFormData.existingFiles.map((_, i) => (
                       <div key={`exist-${i}`} className="flex items-center gap-1.5 text-[10px] bg-blue-50 border border-blue-100 px-2 py-1 rounded-lg text-blue-700 font-bold group">
                         <FileText className="w-2.5 h-2.5" />
-                        <span className="truncate max-w-[120px]">{file.split('/').pop()}</span>
+                        <span className="truncate max-w-[120px]">{`File ${i + 1}.pdf`}</span>
                         <button
                           type="button"
                           onClick={() => setEventFormData({
@@ -522,18 +568,27 @@ export function RTIDetail() {
               <div className="pt-4 flex flex-col gap-3">
                 <div className="flex gap-3">
                   <Button variant="secondary" fullWidth onClick={() => setIsEventModalOpen(false)}>Cancel</Button>
-                  <Button variant="primary" fullWidth type="submit" className="bg-blue-900">
+                  <Button
+                    variant="primary"
+                    fullWidth
+                    type="submit"
+                    className="bg-blue-900"
+                    loading={createHistoryMutation.isPending || updateHistoryMutation.isPending}
+                  >
                     {isEditing ? 'Update Event' : 'Add Event'}
                   </Button>
                 </div>
                 {isEditing && (
-                  <button
+                  <Button
+                    variant="danger"
+                    fullWidth
                     type="button"
+                    className="mt-2 text-xs font-bold"
                     onClick={handleDeleteEntry}
-                    className="w-full py-2 text-xs font-bold text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl transition-colors border border-transparent hover:border-red-100"
+                    loading={deleteHistoryMutation.isPending}
                   >
                     Delete Entry
-                  </button>
+                  </Button>
                 )}
               </div>
             </form>
@@ -545,11 +600,12 @@ export function RTIDetail() {
       <ConfirmDialog
         open={isDeleteConfirmOpen}
         title="Delete Timeline Event"
-        message="Are you sure you want to delete this event? This action cannot be undone and will remove all associated file references."
+        message="Are you sure you want to delete this event? This action cannot be undone."
         onConfirm={confirmDeleteEntry}
         onCancel={() => setIsDeleteConfirmOpen(false)}
-        confirmText="Yes, Delete Event"
+        confirmText="Delete Event"
         variant="danger"
+        loading={deleteHistoryMutation.isPending}
       />
     </>
   );

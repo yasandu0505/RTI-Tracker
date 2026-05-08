@@ -11,18 +11,18 @@ import { useTemplates } from '../hooks/useTemplates'
 
 export function Templates() {
   const [currentPage, setCurrentPage] = useState(1);
-  const { 
-    data, 
-    isLoading, 
-    isFetching, 
-    createTemplate, 
-    updateTemplate, 
-    deleteTemplate: removeTemplate, 
+  const {
+    data,
+    isLoading,
+    isFetching,
+    createTemplate,
+    updateTemplate,
+    deleteTemplate: removeTemplate,
     fetchTemplateContent,
     isCreating,
     isUpdating,
     isDeleting
-  } = useTemplates(currentPage, 10);
+  } = useTemplates(currentPage, 10, setCurrentPage);
 
   const [newTemplates, setNewTemplates] = useState<Template[]>([]);
   const [contentCache, setContentCache] = useState<Record<string, string>>({});
@@ -240,7 +240,7 @@ export function Templates() {
 
       <div className="flex-1 flex flex-col lg:flex-row gap-4 lg:overflow-hidden">
         {/* Sidebar */}
-        {(pagination.totalItems > 0 || newTemplates.length > 0) && (
+        {(pagination.totalItems > 0 || newTemplates.length > 0 || !!selectedTemplate) && (
           <div className="w-full lg:w-60 h-80 lg:h-auto flex flex-col bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex-shrink-0">
             <div className="p-3 border-b border-gray-200 bg-gray-50/50 font-semibold text-xs uppercase tracking-wider text-gray-500">
               Saved Templates
@@ -295,7 +295,7 @@ export function Templates() {
 
         {/* Smart Editor or Empty State */}
         <div className="flex-1 min-h-0 flex flex-col bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden relative">
-          {(pagination.totalItems > 0 || newTemplates.length > 0) && selectedTemplate ? (
+          {((pagination.totalItems > 0 || newTemplates.length > 0) && selectedTemplate) || (selectedTemplate && !selectedTemplate.id.startsWith('new-')) ? (
             <>
               <div className="p-3 border-b border-gray-200 bg-white flex flex-wrap justify-between items-center gap-2 z-10 flex-shrink-0">
                 <div className="flex items-center gap-2 flex-1 min-w-[150px]">
@@ -324,10 +324,10 @@ export function Templates() {
                     </span>
                   )}
                 </div>
-                <Button 
-                  size="sm" 
-                  variant="primary" 
-                  onClick={saveTemplate} 
+                <Button
+                  size="sm"
+                  variant="primary"
+                  onClick={saveTemplate}
                   loading={isCreating || isUpdating}
                   className="flex items-center gap-2 whitespace-nowrap flex-shrink-0"
                 >
@@ -348,7 +348,7 @@ export function Templates() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
               <p className="text-gray-500 text-sm">Loading templates...</p>
             </div>
-          ) : (pagination.totalItems > 0 || newTemplates.length > 0) ? (
+          ) : (pagination.totalItems > 0 || newTemplates.length > 0 || !!selectedTemplate) ? (
             <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-gray-50/50 text-gray-500">
               Select a template from the sidebar to start editing.
             </div>

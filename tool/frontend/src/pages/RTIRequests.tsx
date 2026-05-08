@@ -31,7 +31,12 @@ export function RTIRequests() {
   const [pageParams, setPageParams] = useState({ page: 1, pageSize: 10 });
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const rtiRequestsHook = useRTIRequestList(pageParams.page, pageParams.pageSize, search);
+  const rtiRequestsHook = useRTIRequestList(
+    pageParams.page,
+    pageParams.pageSize,
+    search,
+    (p) => setPageParams(prev => ({ ...prev, page: p }))
+  );
   const rows = rtiRequestsHook.data;
   const pagination = rtiRequestsHook.pagination;
 
@@ -187,7 +192,7 @@ export function RTIRequests() {
       header: 'Last Updated',
       cell: (r: RTIRequest) => (
         <span className="text-xs text-gray-500">
-          {new Date(r.updatedAt).toLocaleString(undefined, { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+          {new Date(r.updatedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'numeric', day: 'numeric' })}
         </span>
       )
     },

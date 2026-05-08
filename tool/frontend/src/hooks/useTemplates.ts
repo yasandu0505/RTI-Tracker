@@ -5,7 +5,11 @@ import { Template } from '../types/rti';
 import { ListResponse } from '../types/api';
 import { useCallback } from 'react';
 
-export const useTemplates = (page: number = 1, pageSize: number = 10) => {
+export const useTemplates = (
+  page: number = 1,
+  pageSize: number = 10,
+  onPageChange?: (page: number) => void
+) => {
   const { http, isSignedIn } = useAsgardeo();
   const queryClient = useQueryClient();
 
@@ -19,6 +23,19 @@ export const useTemplates = (page: number = 1, pageSize: number = 10) => {
   const createTemplateMutation = useMutation({
     mutationFn: (template: Omit<Template, 'id'>) => templateService.createRTITemplate(template, http),
     onSuccess: (newTemplate) => {
+      queryClient.setQueriesData({ queryKey: ['templates'] }, (oldData: ListResponse<Template> | undefined) => {
+        if (!oldData) return oldData;
+        return {
+          ...oldData,
+          data: [newTemplate, ...(oldData.data || [])],
+          pagination: {
+            ...oldData.pagination,
+            totalItems: (oldData.pagination?.totalItems || 0) + 1,
+            totalPages: Math.ceil(((oldData.pagination?.totalItems || 0) + 1) / (oldData.pagination?.pageSize || 10))
+          }
+        };
+      });
+
       queryClient.invalidateQueries({ queryKey: ['templates'] });
       // Update cache for individual template query if it exists
       queryClient.setQueryData(['template', newTemplate.id], newTemplate);
@@ -48,6 +65,9 @@ export const useTemplates = (page: number = 1, pageSize: number = 10) => {
   const deleteTemplateMutation = useMutation({
     mutationFn: (id: string) => templateService.deleteRTITemplate(id, http),
     onSuccess: (_, deletedId) => {
+      if (query.data?.data?.length === 1 && page > 1 && onPageChange) {
+        onPageChange(page - 1);
+      }
       queryClient.invalidateQueries({ queryKey: ['templates'] });
       queryClient.removeQueries({ queryKey: ['template', deletedId] });
     },
