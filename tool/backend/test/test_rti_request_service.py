@@ -79,6 +79,8 @@ async def test_create_rti_request_with_custom_date(rti_request_db, make_file_ser
     db_request = rti_request_db.exec(select(RTIRequest).where(RTIRequest.id == result.id)).first()
     assert db_request is not None
     assert db_request.created_at.year == datetime.now().year
+    assert db_request.created_at.month == datetime.now().month
+    assert db_request.created_at.day == datetime.now().day 
     
     # Check Status History entry_time
     db_history = rti_request_db.exec(select(RTIStatusHistory).where(RTIStatusHistory.rti_request_id == result.id)).first()
@@ -86,6 +88,8 @@ async def test_create_rti_request_with_custom_date(rti_request_db, make_file_ser
     assert db_history.entry_time == datetime(2023, 5, 15)
     # Check that history record itself has a current created_at (auto-handled)
     assert db_history.created_at.year == datetime.now().year
+    assert db_history.created_at.month == datetime.now().month
+    assert db_history.created_at.day == datetime.now().day
 
 @pytest.mark.asyncio
 async def test_create_rti_request_with_iso_custom_date(rti_request_db, make_file_service, make_rti_request_request):
@@ -111,6 +115,8 @@ async def test_create_rti_request_with_iso_custom_date(rti_request_db, make_file
     assert db_request is not None
     # RTIRequest.created_at should be current time (handled by DB)
     assert db_request.created_at.year == datetime.now().year
+    assert db_request.created_at.month == datetime.now().month
+    assert db_request.created_at.day == datetime.now().day 
     
     # Check Status History entry_time
     db_history = rti_request_db.exec(select(RTIStatusHistory).where(RTIStatusHistory.rti_request_id == result.id)).first()
@@ -119,6 +125,8 @@ async def test_create_rti_request_with_iso_custom_date(rti_request_db, make_file
     assert db_history.entry_time == datetime(2023, 6, 20, 10, 30)
     # history.created_at should be current time (handled by DB)
     assert db_history.created_at.year == datetime.now().year
+    assert db_history.created_at.month == datetime.now().month
+    assert db_history.created_at.day == datetime.now().day
 
 @pytest.mark.asyncio
 async def test_create_rti_request_invalid_file_extension(rti_request_db, make_file_service, make_rti_request_request):
