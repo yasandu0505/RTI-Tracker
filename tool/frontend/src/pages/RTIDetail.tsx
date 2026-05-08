@@ -26,11 +26,7 @@ export function RTIDetail() {
   const updateHistoryMutation = useUpdateRtiRequestHistory();
   const deleteHistoryMutation = useDeleteRtiRequestHistory();
 
-  const history = useMemo(() => {
-    return [...(historyResponse?.data || [])].sort(
-      (a, b) => new Date(b.entryTime).getTime() - new Date(a.entryTime).getTime()
-    );
-  }, [historyResponse?.data]);
+  const history = (historyResponse?.data || [])
 
   // Event Modal State
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
