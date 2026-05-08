@@ -42,8 +42,8 @@ export function RTIRequests() {
     isFetching: isFetchingRequests
   } = useRTIRequest(pageParams.page, pageParams.pageSize, search);
 
-  const { data: senders } = useEntityData<Sender>('senders', { list: sendersService.listSenders }, 1, 100);
-  const { data: receivers } = useEntityData<Receiver>('receivers', { list: receiversService.listReceivers }, 1, 6, receiverSearch);
+  const { data: senders = [] } = useEntityData<Sender>('senders', { list: sendersService.listSenders }, 1, 100);
+  const { data: receivers = [] } = useEntityData<Receiver>('receivers', { list: receiversService.listReceivers }, 1, 6, receiverSearch);
   const { data: templatesData } = useTemplates(1, 100);
   const templates = templatesData?.data || [];
 
