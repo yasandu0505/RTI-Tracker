@@ -38,10 +38,22 @@ export function RTIDetail() {
   const [eventFormData, setEventFormData] = useState({
     statusId: '',
     direction: 'sent' as 'sent' | 'received',
+    entryTime: '',
+    exitTime: '',
     description: '',
     existingFiles: [] as string[],
     newFiles: [] as File[]
   });
+
+  // Helper function to format date for datetime-local input
+  const formatForInput = (date: Date | string | null | undefined) => {
+    if (!date) return '';
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return '';
+
+    const pad = (num: number) => num.toString().padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
 
   // Delete Confirmation State
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
@@ -59,7 +71,15 @@ export function RTIDetail() {
   const handleAddEvent = () => {
     setIsEditing(false);
     setSelectedEntry(null);
-    setEventFormData({ statusId: '', direction: 'sent', description: '', existingFiles: [], newFiles: [] });
+    setEventFormData({
+      statusId: '',
+      direction: 'sent',
+      entryTime: formatForInput(new Date()),
+      exitTime: '',
+      description: '',
+      existingFiles: [],
+      newFiles: []
+    });
     setIsEventModalOpen(true);
   };
 
@@ -69,6 +89,8 @@ export function RTIDetail() {
     setEventFormData({
       statusId: entry.rtiStatus.id,
       direction: entry.direction as any,
+      entryTime: formatForInput(entry.entryTime),
+      exitTime: formatForInput(entry.exitTime),
       description: entry.description || '',
       existingFiles: entry.files,
       newFiles: []
@@ -98,6 +120,8 @@ export function RTIDetail() {
           payload: {
             statusId: selectedStatusToSave.id,
             direction: eventFormData.direction,
+            entryTime: eventFormData.entryTime ? new Date(eventFormData.entryTime) : undefined,
+            exitTime: eventFormData.exitTime ? new Date(eventFormData.exitTime) : undefined,
             description: eventFormData.description,
             filesToAdd: eventFormData.newFiles,
             filesToDelete: filesToDelete
@@ -110,6 +134,8 @@ export function RTIDetail() {
           payload: {
             statusId: selectedStatusToSave.id,
             direction: eventFormData.direction,
+            entryTime: eventFormData.entryTime ? new Date(eventFormData.entryTime) : undefined,
+            exitTime: eventFormData.exitTime ? new Date(eventFormData.exitTime) : undefined,
             description: eventFormData.description,
             files: eventFormData.newFiles
           }
@@ -329,7 +355,7 @@ export function RTIDetail() {
                                   </span>
                                 )}
                               </h4>
-                              {idx === 0 && statuses.find(s => s.id === h.rtiStatus.id)?.name !== 'CREATED' && (
+                              {idx === 0 && h.rtiStatus?.name !== 'CREATED' && (
                                 <button
                                   onClick={() => handleEditEvent(h)}
                                   className="p-1 text-gray-400 hover:text-blue-900 transition-colors"
@@ -343,9 +369,11 @@ export function RTIDetail() {
                               <span className="text-[10px] font-medium text-gray-400">Start: {new Date(h.entryTime).toLocaleString(undefined, { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
                               {h.exitTime ? (
                                 <span className="text-[10px] font-medium text-gray-400">End: {new Date(h.exitTime).toLocaleString(undefined, { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
-                              ) : (
+                              ) : idx === 0 ? (
                                 <span className="text-[10px] font-medium text-blue-400 italic">Active</span>
-                              )}
+                              ) : h.rtiStatus?.name !== 'CREATED' ? (
+                                <span className="text-[10px] font-medium text-gray-400">End: -</span>
+                              ) : null}
                             </div>
                           </div>
 
@@ -441,6 +469,28 @@ export function RTIDetail() {
                       </label>
                     );
                   })}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Start Time</label>
+                  <input
+                    type="datetime-local"
+                    required
+                    value={eventFormData.entryTime}
+                    onChange={(e) => setEventFormData({ ...eventFormData, entryTime: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-900 transition-colors"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">End Time (Optional)</label>
+                  <input
+                    type="datetime-local"
+                    value={eventFormData.exitTime}
+                    onChange={(e) => setEventFormData({ ...eventFormData, exitTime: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-900 transition-colors"
+                  />
                 </div>
               </div>
 
