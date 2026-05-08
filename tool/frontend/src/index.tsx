@@ -3,9 +3,10 @@ import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { AsgardeoProvider } from '@asgardeo/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { config } from './config';
 
-const ASGARDEO_CLIENT_ID = import.meta.env.VITE_ASGARDEO_CLIENT_ID;
-const ASGARDEO_BASE_URL = import.meta.env.VITE_ASGARDEO_BASE_URL;
+const ASGARDEO_CLIENT_ID = config.ASGARDEO_CLIENT_ID;
+const ASGARDEO_BASE_URL = config.ASGARDEO_BASE_URL;
 
 const queryClient = new QueryClient();
 
@@ -21,5 +22,4 @@ root.render(
             <App />
         </QueryClientProvider>
     </AsgardeoProvider>
-
 );

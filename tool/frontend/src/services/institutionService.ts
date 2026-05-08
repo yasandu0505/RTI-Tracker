@@ -1,6 +1,7 @@
 import { Institution } from '../types/db';
+import { config } from '../config';
 
-const BASE_URL = import.meta.env.VITE_RTI_TRACKER_SERVER_URL || 'http://localhost:8000';
+const BASE_URL = config.RTI_TRACKER_SERVER_URL;
 
 export const institutionService = {
   listInstitutions: async (page: number = 1, pageSize: number = 10, _search?: string, httpClient?: any): Promise<{

@@ -1,10 +1,11 @@
 import { db } from './mockState';
 import { RTIStatus } from '../types/db';
+import { config } from '../config';
 
 const SLEEP_MS = 500;
 const sleep = () => new Promise(resolve => setTimeout(resolve, SLEEP_MS));
 
-const BASE_URL = import.meta.env.VITE_RTI_TRACKER_SERVER_URL || 'http://localhost:8000';
+const BASE_URL = config.RTI_TRACKER_SERVER_URL;
 
 export const statusService = {
   async list(page: number, pageSize: number, search?: string, httpClient?: any) {

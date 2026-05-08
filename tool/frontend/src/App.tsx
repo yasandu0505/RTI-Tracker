@@ -1,5 +1,3 @@
-import { ProtectedRoute } from '@asgardeo/react-router';
-
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
 import { Layout } from './components/Layout';
@@ -19,15 +17,14 @@ export function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={
-          isLoading && isSignedIn ? (
+          isLoading ? (
             <PreLoader message="Authentication in progress..." />
+          ) : isSignedIn ? (
+            <Layout />
           ) : (
-            <ProtectedRoute redirectTo="/signin">
-              <Layout />
-            </ProtectedRoute>
+            <Navigate to="/signin" replace />
           )
         }>
-          <Route index element={<Navigate to="templates" replace />} />
           <Route path="templates" element={<Templates />} />
           <Route path="receivers" element={<Receivers />} />
           <Route path="rti-requests" element={<RTIRequests />} />
