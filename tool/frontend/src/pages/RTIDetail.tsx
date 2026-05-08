@@ -9,7 +9,7 @@ import { Button } from '../components/Button';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import toast from 'react-hot-toast';
 
-const FILE_STORAGE_BASE_URL = import.meta.env.VITE_FILE_STORAGE_BASE_URL || '';
+const FILE_VIEW_BASE_URL = import.meta.env.VITE_FILE_VIEW_BASE_URL || '';
 
 export function RTIDetail() {
   const { id } = useParams();
@@ -298,7 +298,7 @@ export function RTIDetail() {
                       <p className="text-sm font-bold text-gray-900">{request?.rtiTemplate?.title || 'Custom Request'}</p>
                       {request?.rtiTemplate?.file && (
                         <a
-                          href={`${FILE_STORAGE_BASE_URL}${request.rtiTemplate.file}`}
+                          href={`${FILE_VIEW_BASE_URL}${request.rtiTemplate.file}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-[10px] text-blue-600 hover:text-blue-800 font-bold mt-1 inline-block underline decoration-blue-200 underline-offset-2 transition-colors"
@@ -391,23 +391,18 @@ export function RTIDetail() {
                               <h5 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Attachments</h5>
                               <div className="flex flex-wrap gap-2">
                                 {h.files.map((file, fIdx) => (
-                                  <div
+                                  <a
                                     key={fIdx}
-                                    className="flex items-center gap-1.5 px-2 py-1 bg-white border border-gray-200 text-gray-700 rounded-lg shadow-sm hover:border-blue-300 hover:bg-blue-50/50 transition-all group"
+                                    href={file.startsWith('http') ? file : `${FILE_VIEW_BASE_URL}${file}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-1.5 px-2 py-1 bg-white border border-gray-200 text-gray-700 rounded-lg shadow-sm hover:border-blue-300 hover:bg-blue-50/50 transition-all group cursor-pointer"
                                   >
-                                    <button
-                                      onClick={() => {
-                                        const fileUrl = file.startsWith('http') ? file : `${import.meta.env.VITE_FILE_STORAGE_BASE_URL}/${file}`;
-                                        window.open(fileUrl, '_blank', 'noopener,noreferrer');
-                                      }}
-                                      className="flex items-center gap-1.5 hover:text-blue-900"
-                                    >
-                                      <FileText className="w-3 h-3 text-blue-900" />
-                                      <span className="text-[10px] font-bold">
-                                        {`File ${fIdx + 1}`}
-                                      </span>
-                                    </button>
-                                  </div>
+                                    <FileText className="w-3 h-3 text-blue-900" />
+                                    <span className="text-[10px] font-bold">
+                                      {`File ${fIdx + 1}`}
+                                    </span>
+                                  </a>
                                 ))}
                               </div>
                             </div>
