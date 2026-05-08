@@ -1,9 +1,10 @@
 import { Template } from '../types/rti';
 import { AsgardeoContextProps } from '@asgardeo/react';
 import { ListResponse } from '../types/api';
+import { config } from '../config';
 
-const API_BASE_URL = import.meta.env.VITE_RTI_TRACKER_SERVER_URL || 'http://localhost:8000'
-const FILE_STORAGE_BASE_URL = import.meta.env.VITE_FILE_STORAGE_BASE_URL;
+const API_BASE_URL = config.RTI_TRACKER_SERVER_URL;
+const FILE_STORAGE_BASE_URL = config.FILE_STORAGE_BASE_URL;
 
 /**
  * Helper to convert template fields and content into Multipart FormData.

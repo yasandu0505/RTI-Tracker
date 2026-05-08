@@ -1,8 +1,9 @@
 import { RTIStatusHistory } from '../types/db';
 import { ListResponse } from '../types/api';
 import { AsgardeoContextProps } from '@asgardeo/react';
+import { config } from '../config';
 
-const BASE_URL = import.meta.env.VITE_RTI_TRACKER_SERVER_URL || 'http://localhost:8000';
+const BASE_URL = config.RTI_TRACKER_SERVER_URL;
 
 export const rtiRequestHistoryService = {
   /**

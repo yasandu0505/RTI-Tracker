@@ -1,4 +1,6 @@
-const BASE_URL = import.meta.env.VITE_RTI_TRACKER_SERVER_URL || 'http://localhost:8000';
+import { config } from '../config';
+
+const BASE_URL = config.RTI_TRACKER_SERVER_URL;
 
 export const sendersService = {
   async listSenders(page: number, pageSize: number, search?: string, httpClient?: any) {
