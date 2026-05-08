@@ -160,6 +160,7 @@ export function RTIRequests() {
         rtiTemplateId: formData.templateId || undefined,
         content: finalMarkdown,
         file: pdfFile,
+        createdDate: selectionMode === 'upload' ? formData.requestDate : undefined
       });
 
       toast.success(`RTI request ${isDispatch ? 'dispatched' : 'saved'} successfully`);

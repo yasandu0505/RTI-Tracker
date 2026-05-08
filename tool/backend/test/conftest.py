@@ -590,6 +590,7 @@ def make_rti_request_request():
         sender_id: uuid.UUID = None,
         receiver_id: uuid.UUID = None,
         rti_template_id: uuid.UUID = None,
+        created_date: str = None,
         filename: str = "test.pdf",
         content_type: str = "application/pdf"
     ):
@@ -604,6 +605,7 @@ def make_rti_request_request():
         request.sender_id = sender_id or uuid.uuid4()
         request.receiver_id = receiver_id or uuid.uuid4()
         request.rti_template_id = rti_template_id
+        request.created_date = created_date
         request.file = mock_file
         return request
     return _factory

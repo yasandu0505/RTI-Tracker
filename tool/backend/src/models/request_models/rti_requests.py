@@ -13,6 +13,7 @@ class RTIRequestRequest(BaseModel):
     receiver_id: UUID = Field(..., alias="receiverId", description="ID of the receiver")
     rti_template_id: Optional[UUID] = Field(None, alias="rtiTemplateId", description="ID of the RTI Template")
     file: UploadFile = Field(..., description="RTI Request file (pdf only)")
+    created_date: Optional[str] = Field(None, alias="createdDate", description="Creation date of the RTI Request")
 
 class RTIRequestUpdateRequest(BaseModel):
     model_config = ConfigDict(from_attributes=True, arbitrary_types_allowed=True, str_strip_whitespace=True, populate_by_name=True)

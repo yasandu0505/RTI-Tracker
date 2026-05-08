@@ -21,14 +21,15 @@ export const rtiRequestsService = {
   },
 
 
-  async create(payload: { title?: string, description?: string | null, senderId?: string, receiverId?: string, rtiTemplateId?: string, content?: string, file?: File }, httpClient?: any) {
+  async create(payload: { title?: string, description?: string | null, senderId?: string, receiverId?: string, rtiTemplateId?: string, content?: string, file?: File, createdDate?: string }, httpClient?: any) {
     const formData = toFormData(
       {
         title: payload.title,
         description: payload.description,
         senderId: payload.senderId,
         receiverId: payload.receiverId,
-        rtiTemplateId: payload.rtiTemplateId
+        rtiTemplateId: payload.rtiTemplateId,
+        createdDate: payload.createdDate
       },
       payload.file
     );

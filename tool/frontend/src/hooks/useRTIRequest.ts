@@ -13,7 +13,7 @@ export function useRTIRequest(page: number = 1, pageSize: number = 10, search?: 
   });
 
   const createMutation = useMutation({
-    mutationFn: (payload: { title?: string, description?: string | null, senderId?: string, receiverId?: string, rtiTemplateId?: string, content?: string, file?: File }) =>
+    mutationFn: (payload: { title?: string, description?: string | null, senderId?: string, receiverId?: string, rtiTemplateId?: string, content?: string, file?: File, createdDate?: string }) =>
       rtiRequestsService.create(payload, http),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['rti-requests'] });
