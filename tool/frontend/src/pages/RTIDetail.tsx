@@ -4,7 +4,7 @@ import { ChevronLeft, FileText, CheckCircle, Upload, Clock, User, Building2, Mai
 import { useRTIRequestDetail } from '../hooks/useRTIRequest';
 import { useRtiRequestHistories, useCreateRtiRequestHistory, useUpdateRtiRequestHistory, useDeleteRtiRequestHistory } from '../hooks/useRtiRequestHistory';
 import { useStatuses } from '../hooks/useStatuses';
-import { RTIStatusHistory } from '../types/db';
+import { RTIStatusHistory, RTIStatus } from '../types/db';
 import { Button } from '../components/Button';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import toast from 'react-hot-toast';
@@ -19,7 +19,8 @@ export function RTIDetail() {
   const { data: request, isLoading: isRequestLoading, error: requestError } = useRTIRequestDetail(id || '');
   const { data: historyResponse, isLoading: isHistoryLoading } = useRtiRequestHistories(id || '');
 
-  const { data: statuses = [], isLoading: isStatusesLoading } = useStatuses();
+  const { data: statusesResponse, isLoading: isStatusesLoading } = useStatuses();
+  const statuses: RTIStatus[] = statusesResponse?.data || [];
 
   const createHistoryMutation = useCreateRtiRequestHistory();
   const updateHistoryMutation = useUpdateRtiRequestHistory();
@@ -425,12 +426,12 @@ export function RTIDetail() {
       {/* Add/Edit Event Modal */}
       {isEventModalOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50/50 flex-shrink-0">
               <h3 className="text-lg font-bold text-gray-900">{isEditing ? 'Edit Latest Event' : 'Add New Timeline Event'}</h3>
               <button onClick={() => setIsEventModalOpen(false)} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
             </div>
-            <form onSubmit={handleEventSubmit} className="p-6 space-y-5">
+            <form onSubmit={handleEventSubmit} className="p-6 space-y-5 overflow-y-auto flex-1 custom-scrollbar">
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Status</label>
                 <select
