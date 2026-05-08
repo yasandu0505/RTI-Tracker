@@ -2,7 +2,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAsgardeo } from '@asgardeo/react';
 import { rtiRequestsService } from '../services/rtiRequestsService';
 
-export function useRTIRequestList(page: number = 1, pageSize: number = 10, search?: string) {
+export function useRTIRequestList(
+  page: number = 1,
+  pageSize: number = 10,
+  search?: string,
+  onPageChange?: (page: number) => void
+) {
   const { http, isSignedIn } = useAsgardeo();
   const queryClient = useQueryClient();
 
@@ -15,6 +20,9 @@ export function useRTIRequestList(page: number = 1, pageSize: number = 10, searc
   const deleteMutation = useMutation({
     mutationFn: (id: string) => rtiRequestsService.remove(id, http),
     onSuccess: () => {
+      if (query.data?.data?.length === 1 && page > 1 && onPageChange) {
+        onPageChange(page - 1);
+      }
       queryClient.invalidateQueries({ queryKey: ['rti-requests'] });
     },
   });

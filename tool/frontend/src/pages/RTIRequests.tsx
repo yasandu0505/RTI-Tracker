@@ -31,7 +31,12 @@ export function RTIRequests() {
   const [pageParams, setPageParams] = useState({ page: 1, pageSize: 10 });
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const rtiRequestsHook = useRTIRequestList(pageParams.page, pageParams.pageSize, search);
+  const rtiRequestsHook = useRTIRequestList(
+    pageParams.page,
+    pageParams.pageSize,
+    search,
+    (p) => setPageParams(prev => ({ ...prev, page: p }))
+  );
   const rows = rtiRequestsHook.data;
   const pagination = rtiRequestsHook.pagination;
 
