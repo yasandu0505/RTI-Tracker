@@ -192,7 +192,7 @@ export function RTIRequests() {
       header: 'Last Updated',
       cell: (r: RTIRequest) => (
         <span className="text-xs text-gray-500">
-          {new Date(r.updatedAt).toLocaleString(undefined, { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+          {new Date(r.updatedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'numeric', day: 'numeric' })}
         </span>
       )
     },

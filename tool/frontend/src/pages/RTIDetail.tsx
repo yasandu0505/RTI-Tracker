@@ -52,7 +52,7 @@ export function RTIDetail() {
     if (isNaN(d.getTime())) return '';
 
     const pad = (num: number) => num.toString().padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   };
 
   // Delete Confirmation State
@@ -227,7 +227,7 @@ export function RTIDetail() {
               <div className="flex flex-wrap items-center gap-y-2 gap-x-6 text-sm text-gray-500">
                 <div className="flex items-center gap-1.5">
                   <Clock className="w-4 h-4" />
-                  Last Updated: {new Date(request.updatedAt).toLocaleString(undefined, { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  Last Updated: {new Date(request.updatedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'numeric', day: 'numeric' })}
                 </div>
               </div>
             </div>
@@ -366,9 +366,9 @@ export function RTIDetail() {
                               )}
                             </div>
                             <div className="flex flex-col items-end gap-0.5">
-                              <span className="text-[10px] font-medium text-gray-400">Start: {new Date(h.entryTime).toLocaleString(undefined, { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                              <span className="text-[10px] font-medium text-gray-400">Start: {new Date(h.entryTime).toLocaleDateString(undefined, { year: 'numeric', month: 'numeric', day: 'numeric' })}</span>
                               {h.exitTime ? (
-                                <span className="text-[10px] font-medium text-gray-400">End: {new Date(h.exitTime).toLocaleString(undefined, { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                                <span className="text-[10px] font-medium text-gray-400">End: {new Date(h.exitTime).toLocaleDateString(undefined, { year: 'numeric', month: 'numeric', day: 'numeric' })}</span>
                               ) : idx === 0 ? (
                                 <span className="text-[10px] font-medium text-blue-400 italic">Active</span>
                               ) : h.rtiStatus?.name !== 'CREATED' ? (
@@ -476,7 +476,7 @@ export function RTIDetail() {
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">Start Time</label>
                   <input
-                    type="datetime-local"
+                    type="date"
                     required
                     value={eventFormData.entryTime}
                     onChange={(e) => setEventFormData({ ...eventFormData, entryTime: e.target.value })}
@@ -486,7 +486,7 @@ export function RTIDetail() {
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-gray-500 uppercase tracking-wider">End Time (Optional)</label>
                   <input
-                    type="datetime-local"
+                    type="date"
                     value={eventFormData.exitTime}
                     onChange={(e) => setEventFormData({ ...eventFormData, exitTime: e.target.value })}
                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-blue-900 transition-colors"
