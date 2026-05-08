@@ -8,8 +8,9 @@ import { RTIStatusHistory, RTIStatus } from '../types/db';
 import { Button } from '../components/Button';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import toast from 'react-hot-toast';
+import { config } from '../config';
 
-const FILE_VIEW_BASE_URL = import.meta.env.VITE_FILE_VIEW_BASE_URL || '';
+const FILE_VIEW_BASE_URL = config.FILE_VIEW_BASE_URL;
 
 export function RTIDetail() {
   const { id } = useParams();
