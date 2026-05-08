@@ -68,6 +68,18 @@ class RTIRequestService:
             uploaded_file_path = relative_path
 
             # 3. Insert RTIRequest
+            creation_time = datetime.now(timezone.utc)
+            if request_data.created_date:
+                try:
+                    # Handle YYYY-MM-DD format from frontend
+                    creation_time = datetime.strptime(request_data.created_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+                except ValueError:
+                    try:
+                        # Fallback for ISO format if needed
+                        creation_time = datetime.fromisoformat(request_data.created_date.replace("Z", "+00:00"))
+                    except ValueError:
+                        logger.warning(f"Invalid created_at format: {request_data.created_date}, defaulting to now")
+
             rti_request = RTIRequest(
                 id=unique_id,
                 title=request_data.title,
@@ -91,7 +103,7 @@ class RTIRequestService:
                 status_id=created_status.id,
                 direction=RTIDirection.sent,
                 description="RTI Request Created",
-                entry_time=datetime.now(timezone.utc),
+                entry_time=creation_time,
                 files=[relative_path]
             )
             self.session.add(status_history)

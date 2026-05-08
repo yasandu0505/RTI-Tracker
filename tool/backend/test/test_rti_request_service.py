@@ -55,6 +55,80 @@ async def test_create_rti_request_success(rti_request_db, make_file_service, mak
     fs.create_file.assert_called_once()
 
 @pytest.mark.asyncio
+async def test_create_rti_request_with_custom_date(rti_request_db, make_file_service, make_rti_request_request):
+    """Verifies that an RTI Request is created with a custom created_date."""
+    sender = rti_request_db.exec(select(Sender)).first()
+    receiver = rti_request_db.exec(select(Receiver)).first()
+    
+    fs = make_file_service(relative_path="rti-requests/custom/file.pdf")
+    service = RTIRequestService(session=rti_request_db, file_service=fs)
+    
+    custom_date = "2023-05-15"
+    request = make_rti_request_request(
+        sender_id=sender.id,
+        receiver_id=receiver.id,
+        title="Custom Date RTI Request",
+        created_date=custom_date
+    )
+    
+    result = await service.create_rti_request(request_data=request)
+    
+    assert isinstance(result, RTIRequestResponse)
+    
+    # Check DB record
+    db_request = rti_request_db.exec(select(RTIRequest).where(RTIRequest.id == result.id)).first()
+    assert db_request is not None
+    assert db_request.created_at.year == datetime.now().year
+    assert db_request.created_at.month == datetime.now().month
+    assert db_request.created_at.day == datetime.now().day 
+    
+    # Check Status History entry_time
+    db_history = rti_request_db.exec(select(RTIStatusHistory).where(RTIStatusHistory.rti_request_id == result.id)).first()
+    assert db_history is not None
+    assert db_history.entry_time == datetime(2023, 5, 15)
+    # Check that history record itself has a current created_at (auto-handled)
+    assert db_history.created_at.year == datetime.now().year
+    assert db_history.created_at.month == datetime.now().month
+    assert db_history.created_at.day == datetime.now().day
+
+@pytest.mark.asyncio
+async def test_create_rti_request_with_iso_custom_date(rti_request_db, make_file_service, make_rti_request_request):
+    """Verifies that an RTI Request is created with a custom ISO format created_date."""
+    sender = rti_request_db.exec(select(Sender)).first()
+    receiver = rti_request_db.exec(select(Receiver)).first()
+    
+    fs = make_file_service(relative_path="rti-requests/iso/file.pdf")
+    service = RTIRequestService(session=rti_request_db, file_service=fs)
+    
+    custom_date = "2023-06-20T10:30:00Z"
+    request = make_rti_request_request(
+        sender_id=sender.id,
+        receiver_id=receiver.id,
+        title="ISO Date RTI Request",
+        created_date=custom_date
+    )
+    
+    result = await service.create_rti_request(request_data=request)
+    
+    # Check DB record
+    db_request = rti_request_db.exec(select(RTIRequest).where(RTIRequest.id == result.id)).first()
+    assert db_request is not None
+    # RTIRequest.created_at should be current time (handled by DB)
+    assert db_request.created_at.year == datetime.now().year
+    assert db_request.created_at.month == datetime.now().month
+    assert db_request.created_at.day == datetime.now().day 
+    
+    # Check Status History entry_time
+    db_history = rti_request_db.exec(select(RTIStatusHistory).where(RTIStatusHistory.rti_request_id == result.id)).first()
+    assert db_history is not None
+    # entry_time should be the custom ISO date
+    assert db_history.entry_time == datetime(2023, 6, 20, 10, 30)
+    # history.created_at should be current time (handled by DB)
+    assert db_history.created_at.year == datetime.now().year
+    assert db_history.created_at.month == datetime.now().month
+    assert db_history.created_at.day == datetime.now().day
+
+@pytest.mark.asyncio
 async def test_create_rti_request_invalid_file_extension(rti_request_db, make_file_service, make_rti_request_request):
     """BadRequestException raised for unsupported file extensions."""
     service = RTIRequestService(session=rti_request_db, file_service=make_file_service())

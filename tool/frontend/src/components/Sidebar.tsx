@@ -23,11 +23,11 @@ export function Sidebar() {
       path: '/rti-requests',
       icon: FileText
     },
-    {
-      name: 'Statuses',
-      path: '/statuses',
-      icon: Activity
-    }
+    // {
+    //   name: 'Statuses',
+    //   path: '/statuses',
+    //   icon: Activity
+    // }
   ];
 
   return (

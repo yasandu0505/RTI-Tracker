@@ -43,6 +43,7 @@ async def create_rti_request_endpoint(
     file: Annotated[UploadFile, File(description="RTI Request file (pdf only)")],
     description: Annotated[Optional[str], Form(description="Detailed description of the RTI Request")] = None,
     rti_template_id: Annotated[Optional[UUID], Form(alias="rtiTemplateId", description="ID of the RTI Template")] = None,
+    created_date: Annotated[Optional[str], Form(alias="createdDate", description="Creation date of the RTI Request")] = None,
     service: RTIRequestService = Depends(get_rti_request_service),
     user: User = Depends(RoleChecker([UserRole.ADMIN, UserRole.USER]))
 ):
@@ -52,7 +53,8 @@ async def create_rti_request_endpoint(
         receiver_id=receiver_id,
         file=file,
         description=description,
-        rti_template_id=rti_template_id
+        rti_template_id=rti_template_id,
+        created_date=created_date
     )
     response = await service.create_rti_request(request_data=request_data)
     return response
