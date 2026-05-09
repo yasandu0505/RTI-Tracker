@@ -20,7 +20,7 @@ export function RTIDetail() {
   const { data: request, isLoading: isRequestLoading, error: requestError } = useRTIRequestDetail(id || '');
   const { data: historyResponse, isLoading: isHistoryLoading } = useRtiRequestHistories(id || '');
 
-  const { data: statusesResponse, isLoading: isStatusesLoading } = useStatuses();
+  const { data: statusesResponse, isLoading: isStatusesLoading } = useStatuses(1, 100);
   const statuses: RTIStatus[] = statusesResponse?.data || [];
 
   const createHistoryMutation = useCreateRtiRequestHistory();
