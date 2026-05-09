@@ -52,17 +52,18 @@ export function Statuses() {
   };
 
   const handleSave = async () => {
-    if (!formData.name) {
+    const trimmedName = formData.name.trim();
+    if (!trimmedName) {
       setShowErrors(true);
       return;
     }
 
     try {
       if (editingItem) {
-        await updateStatus({ id: editingItem.id, payload: formData });
+        await updateStatus({ id: editingItem.id, payload: { ...formData, name: trimmedName } });
         toast.success('Status updated successfully');
       } else {
-        await createStatus(formData);
+        await createStatus({ ...formData, name: trimmedName });
         toast.success('Status created successfully');
       }
       setIsModalOpen(false);
@@ -130,7 +131,7 @@ export function Statuses() {
               placeholder="e.g. IN REVIEW"
               className="uppercase"
             />
-            {showErrors && !formData.name && <FieldError error="Name is required" />}
+            {showErrors && !formData.name.trim() && <FieldError error="Name is required" />}
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
