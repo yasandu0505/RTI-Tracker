@@ -2,7 +2,6 @@ import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tansta
 import { useAsgardeo } from '@asgardeo/react';
 import { statusService } from '../services/statusService';
 import { RTIStatus } from '../types/db';
-import { ListResponse } from '../types/api';
 import { QUERY_STALE_TIME } from '../utils/constants';
 
 /**
@@ -27,33 +26,14 @@ export const useStatuses = (
 
   const createStatusMutation = useMutation({
     mutationFn: (payload: Partial<RTIStatus>) => statusService.create(payload, http),
-    onSuccess: (newStatus) => {
-      queryClient.setQueriesData({ queryKey: ['rti-statuses'] }, (oldData: ListResponse<RTIStatus> | undefined) => {
-        if (!oldData) return oldData;
-        return {
-          ...oldData,
-          data: [newStatus, ...(oldData.data || [])],
-          pagination: {
-            ...oldData.pagination,
-            totalItems: (oldData.pagination?.totalItems || 0) + 1,
-            totalPages: Math.ceil(((oldData.pagination?.totalItems || 0) + 1) / (oldData.pagination?.pageSize || 10))
-          }
-        };
-      });
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['rti-statuses'] });
     },
   });
 
   const updateStatusMutation = useMutation({
     mutationFn: ({ id, payload }: { id: string, payload: Partial<RTIStatus> }) => statusService.update(id, payload, http),
-    onSuccess: (updatedStatus) => {
-      queryClient.setQueriesData({ queryKey: ['rti-statuses'] }, (oldData: ListResponse<RTIStatus> | undefined) => {
-        if (!oldData || !oldData.data) return oldData;
-        return {
-          ...oldData,
-          data: oldData.data.map((s) => s.id === updatedStatus.id ? updatedStatus : s)
-        };
-      });
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['rti-statuses'] });
     },
   });

@@ -36,7 +36,6 @@ export const statusService = {
   async create(payload: Partial<RTIStatus>, httpClient?: any): Promise<RTIStatus> {
     if (!httpClient) throw new Error('Asgardeo HTTP client is required');
 
-    console.log('[statusService] Creating status:', payload);
     try {
       const response = await httpClient.request({
         url: `${BASE_URL}/api/v1/rti_statuses`,
@@ -55,7 +54,6 @@ export const statusService = {
   async update(id: string, payload: Partial<RTIStatus>, httpClient?: any): Promise<RTIStatus> {
     if (!httpClient) throw new Error('Asgardeo HTTP client is required');
 
-    console.log('[statusService] Updating status:', id, payload);
     try {
       const response = await httpClient.request({
         url: `${BASE_URL}/api/v1/rti_statuses/${id}`,
@@ -74,7 +72,6 @@ export const statusService = {
   async remove(id: string, httpClient?: any): Promise<void> {
     if (!httpClient) throw new Error('Asgardeo HTTP client is required');
 
-    console.log('[statusService] Deleting status:', id);
     try {
       await httpClient.request({
         url: `${BASE_URL}/api/v1/rti_statuses/${id}`,
