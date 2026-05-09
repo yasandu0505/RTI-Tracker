@@ -9,9 +9,9 @@ export function Sidebar() {
 
   const navItems = [
     {
-      name: 'Template Manager',
-      path: '/templates',
-      icon: FileCode
+      name: 'RTI Requests',
+      path: '/rti-requests',
+      icon: FileText
     },
     {
       name: 'Receivers',
@@ -19,15 +19,15 @@ export function Sidebar() {
       icon: Users
     },
     {
-      name: 'RTI Requests',
-      path: '/rti-requests',
-      icon: FileText
+      name: 'Template Manager',
+      path: '/templates',
+      icon: FileCode
     },
-    // {
-    //   name: 'Statuses',
-    //   path: '/statuses',
-    //   icon: Activity
-    // }
+    {
+      name: 'Statuses',
+      path: '/statuses',
+      icon: Activity
+    }
   ];
 
   return (
