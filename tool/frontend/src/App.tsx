@@ -25,6 +25,7 @@ export function App() {
             <Navigate to="/signin" replace />
           )
         }>
+          <Route index element={<Navigate to="rti-requests" replace />} />
           <Route path="templates" element={<Templates />} />
           <Route path="receivers" element={<Receivers />} />
           <Route path="rti-requests" element={<RTIRequests />} />
